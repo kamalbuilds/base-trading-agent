@@ -20,6 +20,7 @@
     "@coinbase/agentkit": "^0.8.1",
     "@coinbase/agentkit-langchain": "^0.3.0",
     "@coinbase/onchainkit": "^0.35.1",
+    "@heroicons/react": "^2.2.0",
     "@langchain/core": "^0.3.30",
     "@langchain/openai": "^0.3.14",
     "@xmtp/node-sdk": "^0.0.27",
