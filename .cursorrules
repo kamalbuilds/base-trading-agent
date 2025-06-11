@@ -1,0 +1,213 @@
+# BaseAgents Multi-Agent System - Cursor Rules
+
+You are an expert AI assistant helping to build a production-ready multi-agent system for the Base Batch Messaging Buildathon. Follow these rules strictly:
+
+## Project Overview
+Building "BaseAgents" - a sophisticated multi-agent messaging system that combines XMTP secure messaging, Coinbase AgentKit blockchain capabilities, and OnchainKit components to create the next generation of onchain communication.
+
+## Code Quality Standards
+
+### Architecture Principles
+- Use TypeScript throughout for type safety
+- Implement clean architecture with separation of concerns
+- Follow SOLID principles for scalable agent design
+- Use dependency injection for loose coupling
+- Implement proper error handling and logging
+
+### Agent System Design
+- Each agent should be autonomous and specialized
+- Implement proper inter-agent communication protocols
+- Use event-driven architecture for real-time responses
+- Ensure thread-safe operations for concurrent users
+- Implement proper memory management for conversations
+
+### Security & Privacy
+- Never expose private keys or sensitive data
+- Implement proper XMTP encryption patterns
+- Validate all user inputs and blockchain transactions
+- Use secure randomness for key generation
+- Follow Base and XMTP security best practices
+
+## Technology Stack Requirements
+
+### Core Technologies
+- XMTP Node SDK for messaging infrastructure
+- Coinbase AgentKit for blockchain operations
+- OnchainKit for UI components and Base integration
+- LangChain for AI agent orchestration
+- Next.js 15 with App Router for frontend
+
+### Blockchain Integration
+- Base mainnet as primary network
+- Support for Basenames integration
+- Implement proper gas estimation and optimization
+- Use OnchainKit transaction components
+- Support both EOA and Smart Wallet patterns
+
+### Agent Communication
+- Use XMTP for secure end-to-end encrypted messaging
+- Implement proper conversation threading
+- Support both 1:1 and group chat patterns
+- Handle message ordering and delivery guarantees
+- Implement proper error recovery mechanisms
+
+## Development Guidelines
+
+### File Structure
+```
+/app
+  /agents
+    /master          # MasterAgent orchestration
+    /utility         # Utility agents (events, payments)
+    /trading         # DeFi and trading agents
+    /gaming          # Gaming and entertainment agents
+    /social          # Social and community agents
+    /miniapp         # Mini-app launcher agents
+  /components
+    /ui              # Reusable UI components
+    /onchain         # OnchainKit integrations
+    /messaging       # XMTP messaging components
+  /lib
+    /agents          # Agent base classes and utilities
+    /xmtp            # XMTP integration utilities
+    /blockchain      # Blockchain interaction utilities
+    /types           # TypeScript type definitions
+  /hooks             # React hooks for state management
+  /utils             # Utility functions
+```
+
+### Coding Conventions
+- Use descriptive variable and function names
+- Implement proper TypeScript interfaces for all data structures
+- Use consistent error handling patterns
+- Include comprehensive JSDoc comments
+- Follow React best practices for component design
+
+### Testing Strategy
+- Write unit tests for all agent logic
+- Test XMTP message handling thoroughly
+- Mock blockchain interactions for testing
+- Test cross-agent communication scenarios
+- Implement integration tests for user flows
+
+## Agent-Specific Guidelines
+
+### MasterAgent
+- Handle agent routing and delegation
+- Manage user context and conversation state
+- Implement intelligent agent selection logic
+- Monitor agent performance and health
+- Provide fallback mechanisms
+
+### UtilityAgent
+- Implement event planning workflows
+- Handle payment splitting and shared wallets
+- Manage group coordination tasks
+- Integrate with calendar and scheduling systems
+- Support multi-user approval processes
+
+### TradingAgent
+- Use real DeFi protocols and price feeds
+- Implement proper risk management
+- Support portfolio tracking and analytics
+- Handle transaction confirmations properly
+- Provide real-time market updates
+
+### GameAgent
+- Create engaging interactive experiences
+- Support multiplayer game mechanics
+- Implement proper game state management
+- Handle turn-based and real-time games
+- Integrate with group chat dynamics
+
+### SocialAgent
+- Curate relevant content for groups
+- Implement recommendation algorithms
+- Support user preferences and interests
+- Handle content moderation appropriately
+- Foster community engagement
+
+### MiniAppAgent
+- Launch mini-apps within conversations
+- Handle app lifecycle management
+- Support deep linking and navigation
+- Manage app permissions and security
+- Provide seamless user experiences
+
+## Integration Requirements
+
+### XMTP Integration
+- Use latest XMTP Node SDK patterns
+- Implement proper key management
+- Handle conversation sync and streaming
+- Support rich content types
+- Implement proper consent management
+
+### AgentKit Integration
+- Use production AgentKit patterns
+- Implement proper wallet management
+- Handle Base network transactions
+- Support gasless transactions where appropriate
+- Integrate with CDP APIs
+
+### OnchainKit Integration
+- Use OnchainKit components for UI
+- Implement proper wallet connection flows
+- Support Basenames integration
+- Use transaction components for blockchain ops
+- Implement proper error states
+
+## Production Readiness
+
+### Performance
+- Optimize for real-time messaging
+- Implement proper caching strategies
+- Use efficient data structures
+- Monitor and optimize agent response times
+- Handle high concurrent user loads
+
+### Scalability
+- Design for horizontal scaling
+- Implement proper database patterns
+- Use efficient message queuing
+- Support load balancing
+- Plan for multi-region deployment
+
+### Monitoring & Analytics
+- Implement comprehensive logging
+- Track agent performance metrics
+- Monitor user engagement
+- Track transaction success rates
+- Implement error reporting
+
+### Deployment
+- Use proper environment configurations
+- Implement CI/CD pipelines
+- Support staging and production environments
+- Use proper secret management
+- Implement proper backup strategies
+
+## Business Logic Requirements
+
+### Multi-Agent Coordination
+- Implement agent discovery and registration
+- Support dynamic agent loading
+- Handle agent versioning and updates
+- Implement proper load distribution
+- Support agent specialization
+
+### User Experience
+- Provide intuitive conversational interfaces
+- Implement proper onboarding flows
+- Support help and documentation
+- Handle edge cases gracefully
+- Provide clear error messages
+
+### Blockchain Operations
+- Support both testnet and mainnet
+- Implement proper fee estimation
+- Handle transaction failures gracefully
+- Support transaction batching
+- Implement proper nonce management
+
+Remember: This is for a hackathon but should be production-ready. Focus on real functionality over mocks. Use the latest versions of all libraries and follow their documentation precisely. Every feature should work end-to-end with real blockchain transactions and messaging. 
