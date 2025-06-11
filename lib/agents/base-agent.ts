@@ -1,10 +1,8 @@
 import { DecodedMessage, Client as XMTPClient } from '@xmtp/node-sdk';
 import { BaseLanguageModel } from '@langchain/core/language_models/base';
 import { ChatOpenAI } from '@langchain/openai';
-import { Tool } from '@langchain/core/tools';
-import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { ChatPromptTemplate } from '@langchain/core/prompts';
-import { createCdpAgentkit } from '@coinbase/agentkit-langchain';
 import { EventEmitter } from 'events';
 import winston from 'winston';
 import {
@@ -19,13 +17,12 @@ import {
 
 /**
  * Base class for all agents in the BaseAgents system
- * Provides common functionality for XMTP messaging, AgentKit integration, and LangChain orchestration
+ * Provides common functionality for XMTP messaging, blockchain integration, and AI processing
  */
 export abstract class BaseAgent extends EventEmitter {
   protected config: BaseAgentConfig;
   protected llm: BaseLanguageModel;
-  protected tools: Tool[] = [];
-  protected agentExecutor?: AgentExecutor;
+  protected tools: DynamicStructuredTool[] = [];
   protected logger: winston.Logger;
   protected conversationContexts: Map<string, ConversationContext> = new Map();
   protected userMemory: Map<string, Record<string, any>> = new Map();
@@ -43,8 +40,6 @@ export abstract class BaseAgent extends EventEmitter {
    */
   async initialize(): Promise<void> {
     try {
-      await this.setupAgentKit();
-      await this.createAgentExecutor();
       this.logger.info(`${this.config.name} agent initialized successfully`);
       this.emit('initialized', { agentName: this.config.name });
     } catch (error) {
@@ -146,53 +141,30 @@ export abstract class BaseAgent extends EventEmitter {
   }
 
   /**
-   * Setup AgentKit tools for blockchain operations
+   * Process a message using the LLM with context
    */
-  private async setupAgentKit(): Promise<void> {
-    try {
-      const agentkit = await createCdpAgentkit({
-        cdpApiKeyName: process.env.CDP_API_KEY_NAME!,
-        cdpApiKeyPrivateKey: process.env.CDP_API_KEY_PRIVATE_KEY!,
-        networkId: 'base-mainnet',
-      });
+  protected async processWithLLM(message: string, context: AgentContext): Promise<string> {
+    const prompt = ChatPromptTemplate.fromMessages([
+      ['system', this.getSystemPrompt()],
+      ['human', message],
+    ]);
 
-      // Add AgentKit tools to the agent's toolset
-      this.tools.push(...agentkit.tools);
-      
-      this.logger.info('AgentKit setup completed', {
-        agentName: this.config.name,
-        toolCount: agentkit.tools.length
-      });
-    } catch (error) {
-      this.logger.error('Failed to setup AgentKit', { error, agentName: this.config.name });
-      throw error;
-    }
+    const formattedPrompt = await prompt.format({
+      input: message,
+      chat_history: this.formatChatHistory(context.messageHistory),
+    });
+
+    const response = await this.llm.invoke(formattedPrompt);
+    return response.content as string;
   }
 
   /**
-   * Create the LangChain agent executor
+   * Format chat history for context
    */
-  private async createAgentExecutor(): Promise<void> {
-    const prompt = ChatPromptTemplate.fromMessages([
-      ['system', this.getSystemPrompt()],
-      ['placeholder', '{chat_history}'],
-      ['human', '{input}'],
-      ['placeholder', '{agent_scratchpad}'],
-    ]);
-
-    const agent = await createToolCallingAgent({
-      llm: this.llm,
-      tools: this.tools,
-      prompt,
-    });
-
-    this.agentExecutor = new AgentExecutor({
-      agent,
-      tools: this.tools,
-      verbose: process.env.NODE_ENV === 'development',
-      maxIterations: 10,
-      earlyStoppingMethod: 'generate',
-    });
+  private formatChatHistory(history: DecodedMessage[]): string {
+    return history.slice(-5).map(msg => 
+      `${msg.senderInboxId}: ${msg.content}`
+    ).join('\n');
   }
 
   /**

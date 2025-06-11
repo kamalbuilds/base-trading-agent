@@ -1,5 +1,6 @@
 import { DecodedMessage } from '@xmtp/node-sdk';
-import { Tool } from '@langchain/core/tools';
+import { DynamicStructuredTool } from '@langchain/core/tools';
+import { z } from 'zod';
 import { BaseAgent } from './base-agent';
 import {
   MasterAgentConfig,
@@ -72,9 +73,10 @@ export class MasterAgent extends BaseAgent {
   protected initializeTools(): void {
     // Master agent tools for system management
     this.tools.push(
-      new Tool({
+      new DynamicStructuredTool({
         name: 'list_agents',
         description: 'List all registered agents and their capabilities',
+        schema: z.object({}),
         func: async () => {
           const agents = Array.from(this.agentConfigs.values()).map(config => ({
             name: config.name,
@@ -86,9 +88,10 @@ export class MasterAgent extends BaseAgent {
         },
       }),
       
-      new Tool({
+      new DynamicStructuredTool({
         name: 'get_agent_health',
         description: 'Get health status of all agents',
+        schema: z.object({}),
         func: async () => {
           const healthData: Record<string, any> = {};
           
@@ -100,11 +103,14 @@ export class MasterAgent extends BaseAgent {
         },
       }),
 
-      new Tool({
+      new DynamicStructuredTool({
         name: 'route_to_agent',
         description: 'Route a request to a specific agent by name',
-        func: async (input: string) => {
-          const { agentName, message } = JSON.parse(input);
+        schema: z.object({
+          agentName: z.string(),
+          message: z.string(),
+        }),
+        func: async ({ agentName, message }) => {
           const agent = this.registeredAgents.get(agentName);
           
           if (!agent) {
@@ -289,7 +295,7 @@ export class MasterAgent extends BaseAgent {
   /**
    * Check if the message is a system-level query
    */
-  private async isSystemQuery(message: DecodedMessage): boolean {
+  private async isSystemQuery(message: DecodedMessage): Promise<boolean> {
     const content = message.content.toLowerCase();
     const systemKeywords = [
       'help', 'agents', 'capabilities', 'health', 'status', 'system',
