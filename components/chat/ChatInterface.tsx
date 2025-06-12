@@ -5,7 +5,7 @@ import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { AgentTyping } from './AgentTyping';
 import { QuickActions } from './QuickActions';
-import { useAgents } from '../../../hooks/useAgents';
+import { useAgents } from '../../hooks/useAgents';
 
 interface ChatInterfaceProps {
   selectedAgent: string;
