@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChatInterface } from './components/chat/ChatInterface';
-import { AgentSelector } from './components/agents/AgentSelector';
-import { SystemStatus } from './components/system/SystemStatus';
-import { WalletConnection } from './components/wallet/WalletConnection';
-import { ConversationList } from './components/conversations/ConversationList';
+import { ChatInterface } from '../components/chat/ChatInterface';
+import { AgentSelector } from '../components/agents/AgentSelector';
+import { SystemStatus } from '../components/system/SystemStatus';
+import { WalletConnection } from '../components/wallet/WalletConnection';
+import { ConversationList } from '../components/conversations/ConversationList';
+import { ConnectWallet } from '@/components/wallet/ConnectWallet';
 
 export default function Home() {
   const [selectedAgent, setSelectedAgent] = useState<string>('master');
@@ -32,13 +33,14 @@ export default function Home() {
                 <span className="text-sm text-gray-500">Multi-Agent System for Base</span>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <SystemStatus />
-              <WalletConnection 
+              {/* <WalletConnection
                 onConnect={setWalletAddress}
                 onDisconnect={() => setWalletAddress('')}
-              />
+              /> */}
+              <ConnectWallet />
             </div>
           </div>
         </div>
@@ -52,7 +54,7 @@ export default function Home() {
             {/* Agent Selection */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Agent</h2>
-              <AgentSelector 
+              <AgentSelector
                 selectedAgent={selectedAgent}
                 onAgentSelect={setSelectedAgent}
               />
@@ -61,7 +63,7 @@ export default function Home() {
             {/* Conversations */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex-1">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Conversations</h2>
-              <ConversationList 
+              <ConversationList
                 activeConversation={activeConversation}
                 onConversationSelect={setActiveConversation}
               />
@@ -70,7 +72,7 @@ export default function Home() {
 
           {/* Chat Interface */}
           <div className="lg:col-span-3">
-            <ChatInterface 
+            <ChatInterface
               selectedAgent={selectedAgent}
               walletAddress={walletAddress}
               conversationId={activeConversation}
