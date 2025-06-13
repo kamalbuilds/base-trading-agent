@@ -1,10 +1,10 @@
-# BaseAgents - Multi-Agent System for Base Batch Messaging
+# BasedAgents - Multi-Agent System for Base Batch Messaging
 
 🚀 **Base Batch Messaging Buildathon** - A sophisticated multi-agent system built for secure onchain messaging using XMTP, Coinbase AgentKit, and OnchainKit.
 
 ## 🎯 Overview
 
-BaseAgents is a production-ready multi-agent system that brings the power of AI agents to secure messaging on Base. Each agent specializes in different domains while working together seamlessly through XMTP's encrypted messaging protocol.
+BasedAgents is a production-ready multi-agent system that brings the power of AI agents to secure messaging on Base. Each agent specializes in different domains while working together seamlessly through XMTP's encrypted messaging protocol.
 
 ### 🏆 Built for Base Batch Messaging Buildathon
 
@@ -20,7 +20,7 @@ This project addresses all 5 focus areas of the buildathon:
 ### Core Components
 
 ```
-BaseAgents/
+BasedAgents/
 ├── 🎯 MasterAgent       # Central orchestrator and router
 ├── 🛠️  UtilityAgent     # Event planning & payments
 ├── 📈 TradingAgent      # DeFi operations & trading
@@ -306,7 +306,7 @@ const customTool = new DynamicStructuredTool({
 ### GitHub Actions
 ```yaml
 # .github/workflows/deploy.yml
-name: Deploy BaseAgents
+name: Deploy BasedAgents
 on:
   push:
     branches: [main]

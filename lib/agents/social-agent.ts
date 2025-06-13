@@ -8,6 +8,7 @@ import {
   CdpV2EvmWalletProvider,
   walletActionProvider,
   cdpApiActionProvider,
+  messariActionProvider
 } from '@coinbase/agentkit';
 import { getLangChainTools } from '@coinbase/agentkit-langchain';
 import { HumanMessage } from '@langchain/core/messages';
@@ -56,13 +57,16 @@ export class SocialAgent extends BaseAgent {
       });
 
       // Configure CDP Wallet Provider for social tipping
-      const config = {
+      const cdpWalletConfig = {
         apiKeyId: process.env.CDP_API_KEY_ID!,
-        apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
-        networkId: process.env.NETWORK_ID || "base-sepolia",
+        apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+        walletSecret: process.env.CDP_WALLET_SECRET!,
+        idempotencyKey: process.env.IDEMPOTENCY_KEY,
+        address: process.env.ADDRESS as `0x${string}` | undefined,
+        networkId: process.env.NETWORK_ID!,
       };
 
-      this.walletProvider = await CdpV2EvmWalletProvider.configureWithWallet(config);
+      this.walletProvider = await CdpV2EvmWalletProvider.configureWithWallet(cdpWalletConfig);
 
       // Initialize AgentKit for social features
       this.agentKit = await AgentKit.from({
@@ -72,6 +76,9 @@ export class SocialAgent extends BaseAgent {
           cdpApiActionProvider({
             apiKeyId: process.env.CDP_API_KEY_ID!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
+          }),
+          messariActionProvider({
+            apiKey: process.env.MESSARI_API_KEY!,
           }),
         ],
       });
