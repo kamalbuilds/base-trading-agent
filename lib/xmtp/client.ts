@@ -1,20 +1,21 @@
-import { Client, DecodedMessage, Conversation } from '@xmtp/node-sdk';
+import { Client, DecodedMessage, Conversation, Signer as XmtpSigner } from '@xmtp/node-sdk';
 import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
 import winston from 'winston';
 import { XMTPError } from '../types';
+import { createSigner, getEncryptionKeyFromHex } from "../../helpers/client";
 
 /**
  * XMTP Client wrapper for managing secure messaging connections
  */
 export class XMTPClientManager extends EventEmitter {
-  private client?: Client;
+  private client?: Client<any>;
   private logger: winston.Logger;
   private isConnected = false;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 5000; // 5 seconds
-  private messageStreams: Map<string, AsyncIterable<DecodedMessage>> = new Map();
+  private messageStreams: Map<string, AsyncIterable<DecodedMessage<any>>> = new Map();
 
   constructor() {
     super();
@@ -26,25 +27,30 @@ export class XMTPClientManager extends EventEmitter {
    */
   async initialize(): Promise<void> {
     try {
-      const wallet = await this.createWallet();
+      // Ensure the private key is present and correct type
+      const privateKey = process.env.WALLET_PRIVATE_KEY as `0x${string}`;
+      if (!privateKey || !privateKey.startsWith('0x') || privateKey.length !== 66) {
+        throw new XMTPError('WALLET_PRIVATE_KEY must be a 0x-prefixed 64-byte hex string');
+      }
+      const signer = createSigner(privateKey);
+      const dbEncryptionKey = getEncryptionKeyFromHex(process.env.ENCRYPTION_KEY!);
       const env = (process.env.XMTP_ENV as 'dev' | 'production' | 'local') || 'production';
-      
-      this.logger.info('Initializing XMTP client', { env, address: wallet.address });
-
-      this.client = await Client.create(wallet, {
+      let identifier = signer.getIdentifier();
+      if (identifier instanceof Promise) {
+        identifier = await identifier;
+      }
+      this.logger.info('Initializing XMTP client', { env, address: identifier.identifier });
+      this.client = await Client.create(signer, {
+        dbEncryptionKey,
         env,
-        encryptionKey: this.getEncryptionKey(),
       });
-
       await this.client.conversations.sync();
       this.isConnected = true;
       this.reconnectAttempts = 0;
-
       this.logger.info('XMTP client initialized successfully', {
         address: this.client.inboxId,
         env,
       });
-
       this.emit('connected', { inboxId: this.client.inboxId });
     } catch (error) {
       this.logger.error('Failed to initialize XMTP client', { error });
@@ -59,20 +65,17 @@ export class XMTPClientManager extends EventEmitter {
     if (!this.client) {
       throw new XMTPError('Client not initialized');
     }
-
     try {
       this.logger.info('Starting message stream');
-      
       const stream = await this.client.conversations.streamAllMessages();
-      
-      for await (const message of stream) {
+      for await (const message of stream as AsyncIterable<DecodedMessage<any>>) {
+        if (!message) continue;
         await this.handleIncomingMessage(message);
       }
     } catch (error) {
       this.logger.error('Error in message stream', { error });
       this.isConnected = false;
       this.emit('disconnected', { error });
-      
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         await this.reconnect();
       } else {
@@ -88,17 +91,17 @@ export class XMTPClientManager extends EventEmitter {
     if (!this.client) {
       throw new XMTPError('Client not initialized');
     }
-
     try {
-      const conversation = await this.client.conversations.getConversationById(conversationId);
+      const conversation = await this.client.conversations.getConversationById(conversationId) as Conversation<any> | null;
       if (!conversation) {
         throw new XMTPError(`Conversation ${conversationId} not found`);
       }
-
-      const stream = await conversation.streamMessages();
-      this.messageStreams.set(conversationId, stream);
-
-      for await (const message of stream) {
+      // Use streamAllMessages and filter for this conversation
+      const stream = await this.client.conversations.streamAllMessages();
+      this.messageStreams.set(conversationId, stream as AsyncIterable<DecodedMessage<any>>);
+      for await (const message of stream as AsyncIterable<DecodedMessage<any>>) {
+        if (!message) continue;
+        if (message.conversationId !== conversationId) continue;
         await this.handleIncomingMessage(message);
       }
     } catch (error) {
@@ -147,30 +150,25 @@ export class XMTPClientManager extends EventEmitter {
     if (!this.client) {
       throw new XMTPError('Client not initialized');
     }
-
     try {
-      let conversation: Conversation;
-
+      let conversation: Conversation<any>;
       if (participants.length === 1) {
-        // Create 1:1 conversation
-        conversation = await this.client.conversations.newConversation(participants[0]);
+        // Use newDm for 1:1 conversation
+        conversation = await this.client.conversations.newDm(participants[0]) as Conversation<any>;
       } else {
-        // Create group conversation
-        conversation = await this.client.conversations.newGroup(participants);
+        // Use newGroup for group conversation
+        conversation = await this.client.conversations.newGroup(participants) as Conversation<any>;
       }
-
       this.logger.info('Conversation created', {
         conversationId: conversation.id,
         participants,
         isGroup: participants.length > 1,
       });
-
       this.emit('conversationCreated', {
         conversationId: conversation.id,
         participants,
         isGroup: participants.length > 1,
       });
-
       return conversation.id;
     } catch (error) {
       this.logger.error('Failed to create conversation', { error, participants });
@@ -181,13 +179,13 @@ export class XMTPClientManager extends EventEmitter {
   /**
    * Get conversation by ID
    */
-  async getConversation(conversationId: string): Promise<Conversation | null> {
+  async getConversation(conversationId: string): Promise<Conversation<any> | null> {
     if (!this.client) {
       throw new XMTPError('Client not initialized');
     }
-
     try {
-      return await this.client.conversations.getConversationById(conversationId);
+      const conv = await this.client.conversations.getConversationById(conversationId) as Conversation<any> | null;
+      return conv ?? null;
     } catch (error) {
       this.logger.error('Failed to get conversation', { error, conversationId });
       return null;
@@ -197,13 +195,12 @@ export class XMTPClientManager extends EventEmitter {
   /**
    * List all conversations
    */
-  async listConversations(): Promise<Conversation[]> {
+  async listConversations(): Promise<Conversation<any>[]> {
     if (!this.client) {
       throw new XMTPError('Client not initialized');
     }
-
     try {
-      return await this.client.conversations.list();
+      return await this.client.conversations.list() as Conversation<any>[];
     } catch (error) {
       this.logger.error('Failed to list conversations', { error });
       throw new XMTPError('Failed to list conversations', { error });
@@ -230,57 +227,21 @@ export class XMTPClientManager extends EventEmitter {
   /**
    * Handle incoming message
    */
-  private async handleIncomingMessage(message: DecodedMessage): Promise<void> {
+  private async handleIncomingMessage(message: DecodedMessage<any>): Promise<void> {
     try {
       // Skip messages from self
       if (message.senderInboxId === this.client?.inboxId) {
         return;
       }
-
       this.logger.info('Received message', {
         conversationId: message.conversationId,
         senderInboxId: message.senderInboxId,
-        messageLength: message.content.length,
+        messageLength: typeof message.content === 'string' ? message.content.length : 0,
         timestamp: new Date(),
       });
-
       this.emit('messageReceived', message);
     } catch (error) {
       this.logger.error('Error handling incoming message', { error, messageId: message.id });
-    }
-  }
-
-  /**
-   * Create wallet from private key
-   */
-  private async createWallet(): Promise<ethers.Wallet> {
-    const privateKey = process.env.WALLET_PRIVATE_KEY;
-    if (!privateKey) {
-      throw new XMTPError('WALLET_PRIVATE_KEY environment variable is required');
-    }
-
-    try {
-      return new ethers.Wallet(privateKey);
-    } catch (error) {
-      throw new XMTPError('Invalid wallet private key', { error });
-    }
-  }
-
-  /**
-   * Get encryption key from environment
-   */
-  private getEncryptionKey(): Uint8Array {
-    const encryptionKey = process.env.ENCRYPTION_KEY;
-    if (!encryptionKey) {
-      throw new XMTPError('ENCRYPTION_KEY environment variable is required');
-    }
-
-    try {
-      // Remove 0x prefix if present and convert to Uint8Array
-      const cleanKey = encryptionKey.startsWith('0x') ? encryptionKey.slice(2) : encryptionKey;
-      return new Uint8Array(Buffer.from(cleanKey, 'hex'));
-    } catch (error) {
-      throw new XMTPError('Invalid encryption key format', { error });
     }
   }
 

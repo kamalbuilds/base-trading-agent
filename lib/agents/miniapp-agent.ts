@@ -1,8 +1,10 @@
+// NOTE: This agent is ready for EVM wallet management with CdpV2EvmWalletProvider (Coinbase AgentKit v2)
 import { DecodedMessage } from '@xmtp/node-sdk';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';
 import { v4 as uuidv4 } from 'uuid';
+import { CdpV2EvmWalletProvider } from '@coinbase/agentkit';
 import {
   MiniAppAgentConfig,
   AgentContext,
@@ -136,7 +138,7 @@ export class MiniAppAgent extends BaseAgent {
   }
 
   protected async handleMessage(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
 
     if (this.isAppRequest(content)) {
       return await this.handleAppRequest(message, context);
@@ -149,7 +151,7 @@ export class MiniAppAgent extends BaseAgent {
     }
 
     // Process with LLM for complex tool requests
-    const response = await this.processWithLLM(message.content, context);
+    const response = await this.processWithLLM(typeof message.content === 'string' ? message.content : '', context);
 
     return {
       message: response,
@@ -158,7 +160,7 @@ export class MiniAppAgent extends BaseAgent {
   }
 
   protected async shouldHandleMessage(message: DecodedMessage, context: AgentContext): Promise<boolean> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
     const miniappKeywords = [
       'app', 'tool', 'launch', 'open', 'calculate', 'convert', 'poll', 
       'calculator', 'converter', 'utility', 'mini-app', 'miniapp'
@@ -168,7 +170,7 @@ export class MiniAppAgent extends BaseAgent {
   }
 
   protected async suggestNextAgent(message: DecodedMessage, context: AgentContext): Promise<string> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
     
     if (content.includes('trade') || content.includes('defi')) return 'trading';
     if (content.includes('game') || content.includes('play')) return 'gaming';
@@ -518,7 +520,7 @@ export class MiniAppAgent extends BaseAgent {
 
   private async handleCalculation(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
     // Extract calculation from message
-    const match = message.content.match(/calculate\s+(.+)|(.+)\s*=\s*\?/i);
+    const match = typeof message.content === 'string' ? message.content.match(/calculate\s+(.+)|(.+)\s*=\s*\?/i) : null;
     if (match) {
       const expression = match[1] || match[2];
       try {

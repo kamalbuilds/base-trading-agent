@@ -1,10 +1,11 @@
+// NOTE: This agent now uses only CdpV2EvmWalletProvider for wallet management (Coinbase AgentKit v2)
 import { DecodedMessage } from '@xmtp/node-sdk';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';
 import { 
   AgentKit,
-  CdpWalletProvider,
+  CdpV2EvmWalletProvider,
   walletActionProvider,
   cdpApiActionProvider,
 } from '@coinbase/agentkit';
@@ -26,7 +27,7 @@ import {
  */
 export class SocialAgent extends BaseAgent {
   private agentKit?: AgentKit;
-  private walletProvider?: CdpWalletProvider;
+  private walletProvider?: CdpV2EvmWalletProvider;
   private contentSources: Map<string, ContentSource> = new Map();
   private curatedContent: Map<string, CuratedContent[]> = new Map();
   private userPreferences: Map<string, UserPreferences> = new Map();
@@ -48,7 +49,9 @@ export class SocialAgent extends BaseAgent {
         networkId: process.env.NETWORK_ID || "base-sepolia",
       };
 
-      this.walletProvider = await CdpWalletProvider.configureWithWallet(config);
+      console.log('[SocialAgent] Config:', config);
+
+      this.walletProvider = await CdpV2EvmWalletProvider.configureWithWallet(config);
 
       // Initialize AgentKit for social features
       this.agentKit = await AgentKit.from({
@@ -516,7 +519,7 @@ Return as JSON with:
   }
 
   protected async handleMessage(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
 
     if (this.isNewsRequest(content)) {
       return await this.handleNewsRequest(message, context);
@@ -529,20 +532,20 @@ Return as JSON with:
     }
 
     // Process with LLM using real social tools
-    const response = await this.processWithLLM(message.content, context);
+    const response = await this.processWithLLM(typeof message.content === 'string' ? message.content : '', context);
 
     return {
       message: response,
       metadata: { 
         handledBy: 'social-agent',
-        walletAddress: this.walletProvider ? await (await this.walletProvider.getWallet().getDefaultAddress()).getId() : null
+        walletAddress: this.walletProvider ? this.walletProvider.getAddress() : null
       },
       actions: []
     };
   }
 
   protected async shouldHandleMessage(message: DecodedMessage, context: AgentContext): Promise<boolean> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
     const socialKeywords = [
       'news', 'trending', 'content', 'social', 'feed', 'recommend', 
       'crypto news', 'updates', 'sentiment', 'community', 'share',
@@ -553,7 +556,7 @@ Return as JSON with:
   }
 
   protected async suggestNextAgent(message: DecodedMessage, context: AgentContext): Promise<string> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
     
     if (content.includes('trade') || content.includes('defi') || content.includes('swap')) return 'trading';
     if (content.includes('game') || content.includes('play')) return 'game';

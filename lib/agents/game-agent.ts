@@ -1,8 +1,10 @@
+// NOTE: This agent is ready for EVM wallet management with CdpV2EvmWalletProvider (Coinbase AgentKit v2)
 import { DecodedMessage } from '@xmtp/node-sdk';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';
 import { v4 as uuidv4 } from 'uuid';
+import { CdpV2EvmWalletProvider } from '@coinbase/agentkit';
 import {
   GamingAgentConfig,
   AgentContext,

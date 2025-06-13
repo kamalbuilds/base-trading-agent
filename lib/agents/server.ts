@@ -128,9 +128,11 @@ export class BaseAgentsServer extends EventEmitter {
    */
   private async initializeAgents(): Promise<void> {
     this.logger.info('🤖 Initializing agents...');
+    console.log('[BaseAgentsServer] Initializing agents...');
 
     try {
       // Initialize Master Agent
+      console.log('[BaseAgentsServer] Initializing MasterAgent...');
       const masterConfig: MasterAgentConfig = {
         name: 'MasterAgent',
         description: 'Central orchestrator for the BaseAgents multi-agent system',
@@ -148,12 +150,13 @@ export class BaseAgentsServer extends EventEmitter {
         fallbackAgent: 'UtilityAgent',
         maxConversations: 1000,
       };
-
       this.masterAgent = new MasterAgent(masterConfig);
       await this.masterAgent.initialize();
       this.agents.set('MasterAgent', this.masterAgent);
+      console.log('[BaseAgentsServer] MasterAgent initialized and registered.');
 
       // Initialize Utility Agent
+      console.log('[BaseAgentsServer] Initializing UtilityAgent...');
       const utilityConfig: UtilityAgentConfig = {
         name: 'UtilityAgent',
         description: 'Handles event planning, payment splitting, and group coordination',
@@ -170,13 +173,14 @@ export class BaseAgentsServer extends EventEmitter {
         maxParticipants: 50,
         defaultCurrency: 'USDC',
       };
-
       const utilityAgent = new UtilityAgent(utilityConfig);
       await utilityAgent.initialize();
       await this.masterAgent.registerAgent(utilityAgent);
       this.agents.set('UtilityAgent', utilityAgent);
+      console.log('[BaseAgentsServer] UtilityAgent initialized and registered.');
 
       // Initialize Trading Agent
+      console.log('[BaseAgentsServer] Initializing TradingAgent...');
       const tradingConfig: TradingAgentConfig = {
         name: 'TradingAgent',
         description: 'Handles DeFi operations, trading, and portfolio management',
@@ -189,13 +193,14 @@ export class BaseAgentsServer extends EventEmitter {
         riskTolerance: 'medium',
         tradingPairs: ['ETH/USDC', 'BTC/USDC', 'USDC/DAI'],
       };
-
       const tradingAgent = new TradingAgent(tradingConfig);
       await tradingAgent.initialize();
       await this.masterAgent.registerAgent(tradingAgent);
       this.agents.set('TradingAgent', tradingAgent);
+      console.log('[BaseAgentsServer] TradingAgent initialized and registered.');
 
       // Initialize Game Agent
+      console.log('[BaseAgentsServer] Initializing GameAgent...');
       const gameConfig: GamingAgentConfig = {
         name: 'GameAgent',
         description: 'Manages interactive multiplayer games and entertainment',
@@ -210,13 +215,14 @@ export class BaseAgentsServer extends EventEmitter {
         maxPlayersPerGame: 20,
         enableBetting: true,
       };
-
       const gameAgent = new GameAgent(gameConfig);
       await gameAgent.initialize();
       await this.masterAgent.registerAgent(gameAgent);
       this.agents.set('GameAgent', gameAgent);
+      console.log('[BaseAgentsServer] GameAgent initialized and registered.');
 
       // Initialize Social Agent
+      console.log('[BaseAgentsServer] Initializing SocialAgent...');
       const socialConfig: SocialAgentConfig = {
         name: 'SocialAgent',
         description: 'Curates content and manages community engagement',
@@ -231,13 +237,14 @@ export class BaseAgentsServer extends EventEmitter {
         moderationLevel: 'moderate',
         personalizedContent: true,
       };
-
       const socialAgent = new SocialAgent(socialConfig);
       await socialAgent.initialize();
       await this.masterAgent.registerAgent(socialAgent);
       this.agents.set('SocialAgent', socialAgent);
+      console.log('[BaseAgentsServer] SocialAgent initialized and registered.');
 
       // Initialize MiniApp Agent
+      console.log('[BaseAgentsServer] Initializing MiniAppAgent...');
       const miniappConfig: MiniAppAgentConfig = {
         name: 'MiniAppAgent',
         description: 'Launches and manages mini-applications within conversations',
@@ -252,16 +259,18 @@ export class BaseAgentsServer extends EventEmitter {
         sandboxMode: false,
         maxAppsPerConversation: 5,
       };
-
       const miniappAgent = new MiniAppAgent(miniappConfig);
       await miniappAgent.initialize();
       await this.masterAgent.registerAgent(miniappAgent);
       this.agents.set('MiniAppAgent', miniappAgent);
+      console.log('[BaseAgentsServer] MiniAppAgent initialized and registered.');
 
+      console.log(`[BaseAgentsServer] All agents initialized. Total: ${this.agents.size}`);
       this.logger.info(`✅ Initialized ${this.agents.size} agents successfully`);
 
     } catch (error) {
       this.logger.error('❌ Failed to initialize agents', { error });
+      console.error('[BaseAgentsServer] Failed to initialize agents:', error);
       throw error;
     }
   }

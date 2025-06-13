@@ -1,10 +1,11 @@
+// NOTE: This agent now uses only CdpV2WalletProvider for wallet management (Coinbase AgentKit v2)
 import { DecodedMessage } from '@xmtp/node-sdk';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';
 import { 
   AgentKit,
-  CdpWalletProvider,
+  CdpV2EvmWalletProvider,
   wethActionProvider,
   walletActionProvider,
   erc20ActionProvider,
@@ -12,6 +13,9 @@ import {
   cdpApiActionProvider,
   cdpWalletActionProvider,
 } from '@coinbase/agentkit';
+import {
+  CdpV2SolanaWalletProvider, // for solana
+} from "@coinbase/agentkit";
 import { getLangChainTools } from '@coinbase/agentkit-langchain';
 import {
   UtilityAgentConfig,
@@ -26,10 +30,12 @@ import {
 /**
  * Production-grade UtilityAgent with real blockchain operations via Coinbase AgentKit
  * Handles event planning, payment splitting, shared wallets, and group coordination
+ * Uses only CdpV2WalletProvider for wallet management (EVM/Solana supported)
  */
 export class UtilityAgent extends BaseAgent {
   private agentKit?: AgentKit;
-  private walletProvider?: CdpWalletProvider;
+  private walletProvider?: CdpV2EvmWalletProvider;
+  private walletAddress?: string;
   private eventPlans: Map<string, EventPlan> = new Map();
   private paymentSplits: Map<string, PaymentSplit> = new Map();
   private expenses: Map<string, Expense[]> = new Map();
@@ -39,18 +45,30 @@ export class UtilityAgent extends BaseAgent {
   }
 
   /**
-   * Initialize AgentKit with real blockchain capabilities
+   * Initialize AgentKit with real blockchain capabilities using CdpV2WalletProvider
    */
   async initialize(): Promise<void> {
     try {
-      // Configure CDP Wallet Provider with real credentials
-      const config = {
+      // Configure CDP V2 Wallet Provider with real credentials
+      const cdpWalletConfig = {
         apiKeyId: process.env.CDP_API_KEY_ID!,
-        apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
-        networkId: process.env.NETWORK_ID || "base-sepolia",
+        apiKeySecret: process.env.CDP_API_KEY_SECRET!,
+        walletSecret: process.env.CDP_WALLET_SECRET!,
+        idempotencyKey: process.env.IDEMPOTENCY_KEY, // optional
+        address: process.env.ADDRESS as `0x${string}` | undefined, // optional
+        networkId: process.env.NETWORK_ID!,
       };
 
-      this.walletProvider = await CdpWalletProvider.configureWithWallet(config);
+      console.log('[UtilityAgent] CDP V2 Wallet Config:', cdpWalletConfig);
+
+      try {
+        this.walletProvider = await CdpV2EvmWalletProvider.configureWithWallet(cdpWalletConfig);
+        // Store the wallet address after provider creation
+        this.walletAddress = this.walletProvider.getAddress();
+      } catch (error) {
+        console.error('[UtilityAgent] WalletProvider error:', error, JSON.stringify(error));
+        throw error;
+      }
 
       // Initialize AgentKit with action providers for utility functions
       this.agentKit = await AgentKit.from({
@@ -61,11 +79,11 @@ export class UtilityAgent extends BaseAgent {
           erc20ActionProvider(),
           erc721ActionProvider(),
           cdpApiActionProvider({
-            apiKeyId: process.env.CDP_API_KEY_ID!,
+            apiKeyId: process.env.CDP_API_KEY_NAME!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
           }),
           cdpWalletActionProvider({
-            apiKeyId: process.env.CDP_API_KEY_ID!,
+            apiKeyId: process.env.CDP_API_KEY_NAME!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
           }),
         ],
@@ -81,7 +99,7 @@ export class UtilityAgent extends BaseAgent {
       }
 
       await super.initialize();
-      this.logger.info('UtilityAgent initialized with real blockchain capabilities');
+      this.logger.info('UtilityAgent initialized with real blockchain capabilities (CDP V2 Wallet)');
     } catch (error) {
       this.logger.error('Failed to initialize UtilityAgent with AgentKit', { error });
       throw error;
@@ -166,13 +184,12 @@ ${transfers.map(t =>
               throw new Error('Wallet provider not initialized');
             }
 
-            // Create a new wallet for the group
-            const wallet = this.walletProvider.getWallet();
-            const walletAddress = await (await wallet.getDefaultAddress()).getId();
+            // Use the stored wallet address
+            const walletAddress = this.walletAddress;
 
             // If initial funding is provided, transfer from main wallet
             let fundingResult = '';
-            if (initialFunding > 0) {
+            if (initialFunding > 0 && walletAddress) {
               try {
                 const result = await this.executeTransfer(walletAddress, initialFunding.toString(), 'USDC');
                 fundingResult = `\nInitial funding: ${initialFunding} USDC (TX: ${result})`;
@@ -236,8 +253,7 @@ Use the wallet address for group transactions and expense tracking.`;
             let walletInfo = '';
             if (budget && budget > 0) {
               try {
-                const wallet = this.walletProvider?.getWallet();
-                const walletAddress = wallet ? await (await wallet.getDefaultAddress()).getId() : 'N/A';
+                const walletAddress = this.walletAddress || 'N/A';
                 walletInfo = `\n\nShared wallet created for expenses: ${walletAddress}
 Budget: ${budget} USDC
 Participants can contribute to this address for event expenses.`;
@@ -428,7 +444,7 @@ All successful transactions are recorded on Base blockchain for full transparenc
               throw new Error('Wallet provider not initialized');
             }
 
-            const walletsToCheck = addresses || [await (await this.walletProvider.getWallet().getDefaultAddress()).getId()];
+            const walletsToCheck = addresses || [this.walletAddress].filter(Boolean);
             
             const balanceResults = await Promise.all(
               walletsToCheck.map(async (address: string) => {
@@ -521,7 +537,7 @@ All balances are live from Base blockchain.`;
   }
 
   protected async handleMessage(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
 
     if (this.isEventQuery(content)) {
       return await this.handleEventRequest(message, context);
@@ -532,21 +548,21 @@ All balances are live from Base blockchain.`;
     }
 
     // Process with LLM using AgentKit tools for complex queries
-    const response = await this.processWithLLM(message.content, context);
+    const response = await this.processWithLLM(message.content as string, context);
 
     return {
       message: response,
       metadata: { 
         handledBy: 'utility-agent',
-        walletAddress: this.walletProvider ? await (await this.walletProvider.getWallet().getDefaultAddress()).getId() : null,
-        networkId: this.walletProvider ? this.walletProvider.getNetwork().networkId : null
+        walletAddress: this.walletAddress || null,
+        networkId: process.env.NETWORK_ID || null
       },
       actions: []
     };
   }
 
   protected async shouldHandleMessage(message: DecodedMessage, context: AgentContext): Promise<boolean> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
     const utilityKeywords = [
       'event', 'plan', 'payment', 'split', 'expense', 'share', 'group', 'wallet',
       'organize', 'coordinate', 'fund', 'budget', 'reimburse', 'owe', 'bill',
@@ -557,7 +573,7 @@ All balances are live from Base blockchain.`;
   }
 
   protected async suggestNextAgent(message: DecodedMessage, context: AgentContext): Promise<string> {
-    const content = message.content.toLowerCase();
+    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
     
     if (content.includes('trade') || content.includes('swap') || content.includes('token')) return 'trading';
     if (content.includes('game') || content.includes('play')) return 'game';
