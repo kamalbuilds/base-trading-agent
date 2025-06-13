@@ -1,4 +1,4 @@
-import { DecodedMessage } from '@xmtp/node-sdk';
+import { DecodedMessage } from '@xmtp/browser-sdk';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';

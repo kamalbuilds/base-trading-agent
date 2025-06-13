@@ -1,5 +1,5 @@
 // NOTE: This agent now uses only CdpV2EvmWalletProvider for wallet management (Coinbase AgentKit v2)
-import { DecodedMessage } from '@xmtp/node-sdk';
+import { DecodedMessage } from '@xmtp/browser-sdk';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';

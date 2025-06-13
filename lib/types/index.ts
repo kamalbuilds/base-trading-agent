@@ -1,4 +1,4 @@
-import { DecodedMessage, Client as XMTPClient } from '@xmtp/node-sdk';
+import { DecodedMessage, Client as XMTPClient } from '@xmtp/browser-sdk';
 import { Call } from 'viem';
 
 // Core Agent Types

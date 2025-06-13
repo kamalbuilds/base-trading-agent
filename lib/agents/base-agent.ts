@@ -1,4 +1,4 @@
-import { DecodedMessage, Client as XMTPClient } from '@xmtp/node-sdk';
+import { DecodedMessage, Client as XMTPClient } from '@xmtp/browser-sdk';
 import { BaseLanguageModel } from '@langchain/core/language_models/base';
 import { ChatOpenAI } from '@langchain/openai';
 import { DynamicStructuredTool } from '@langchain/core/tools';

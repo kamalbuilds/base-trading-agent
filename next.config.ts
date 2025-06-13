@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       '@coinbase/agentkit',
       '@coinbase/agentkit-langchain',
-      '@xmtp/node-sdk',
+      '@xmtp/browser-sdk',
       'lucide-react',
     ],
   },

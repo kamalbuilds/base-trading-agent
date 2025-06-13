@@ -1,5 +1,5 @@
 // NOTE: This agent is ready for EVM wallet management with CdpV2EvmWalletProvider (Coinbase AgentKit v2)
-import { DecodedMessage } from '@xmtp/node-sdk';
+import { DecodedMessage } from '@xmtp/browser-sdk';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { BaseAgent } from './base-agent';
@@ -121,7 +121,7 @@ export class GameAgent extends BaseAgent {
     }
 
     // Process with LLM for complex queries
-    const response = await this.processWithLLM(message.content, context);
+    const response = await this.processWithLLM(message.content as string, context);
 
     return {
       message: response,

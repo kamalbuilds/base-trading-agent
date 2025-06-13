@@ -1,4 +1,4 @@
-import { Client, DecodedMessage, Conversation, Signer as XmtpSigner } from '@xmtp/node-sdk';
+import { Client, DecodedMessage, Conversation, Signer as XmtpSigner } from '@xmtp/browser-sdk';
 import { ethers } from 'ethers';
 import { EventEmitter } from 'events';
 import winston from 'winston';
