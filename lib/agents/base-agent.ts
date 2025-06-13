@@ -79,7 +79,7 @@ export abstract class BaseAgent extends EventEmitter {
         userId: context.userId,
         conversationId: context.conversationId,
         processingTime,
-        messageLength: message.content.length
+        messageLength: (message.content as string).length
       });
 
       this.emit('messageProcessed', {
@@ -134,7 +134,7 @@ export abstract class BaseAgent extends EventEmitter {
    */
   private createLLM(): BaseLanguageModel {
     return new ChatOpenAI({
-      modelName: 'gpt-4o-mini',
+      modelName: 'gpt-4o',
       temperature: 0.1,
       openAIApiKey: process.env.OPENAI_API_KEY,
     });

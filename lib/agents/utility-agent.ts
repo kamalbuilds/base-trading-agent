@@ -27,6 +27,10 @@ import {
   zeroDevWalletActionProvider,
 } from '@coinbase/agentkit';
 import { getLangChainTools } from '@coinbase/agentkit-langchain';
+import { HumanMessage } from '@langchain/core/messages';
+import { MemorySaver } from '@langchain/langgraph';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { ChatOpenAI } from '@langchain/openai';
 import {
   UtilityAgentConfig,
   AgentContext,
@@ -46,6 +50,9 @@ export class UtilityAgent extends BaseAgent {
   private agentKit?: AgentKit;
   private walletProvider?: CdpV2EvmWalletProvider;
   private walletAddress?: string;
+  private reactAgent?: ReturnType<typeof createReactAgent>;
+  private memory?: MemorySaver;
+  private llmModel?: ChatOpenAI;
   private eventPlans: Map<string, EventPlan> = new Map();
   private paymentSplits: Map<string, PaymentSplit> = new Map();
   private expenses: Map<string, Expense[]> = new Map();
@@ -55,17 +62,23 @@ export class UtilityAgent extends BaseAgent {
   }
 
   /**
-   * Initialize AgentKit with real blockchain capabilities using CdpV2WalletProvider
+   * Initialize AgentKit with createReactAgent for proper LLM integration
    */
   async initialize(): Promise<void> {
     try {
+      // Initialize LLM
+      this.llmModel = new ChatOpenAI({
+        model: "gpt-4o",
+        temperature: 0.2,
+      });
+
       // Configure CDP V2 Wallet Provider with real credentials
       const cdpWalletConfig = {
         apiKeyId: process.env.CDP_API_KEY_ID!,
         apiKeySecret: process.env.CDP_API_KEY_SECRET!,
         walletSecret: process.env.CDP_WALLET_SECRET!,
-        idempotencyKey: process.env.IDEMPOTENCY_KEY, // optional
-        address: process.env.ADDRESS as `0x${string}` | undefined, // optional
+        idempotencyKey: process.env.IDEMPOTENCY_KEY,
+        address: process.env.ADDRESS as `0x${string}` | undefined,
         networkId: process.env.NETWORK_ID!,
       };
 
@@ -126,15 +139,24 @@ export class UtilityAgent extends BaseAgent {
 
       // Get AgentKit tools for LangChain integration
       const agentKitTools = await getLangChainTools(this.agentKit);
-      // Convert AgentKit tools to DynamicStructuredTool if needed
-      for (const tool of agentKitTools) {
-        if (tool instanceof DynamicStructuredTool) {
-          this.tools.push(tool);
-        }
-      }
+      
+      // Add custom tools
+      this.initializeTools();
+      const allTools = [...agentKitTools, ...this.tools];
+
+      // Initialize memory for conversation context
+      this.memory = new MemorySaver();
+
+      // Create React Agent with LLM, tools, and memory
+      this.reactAgent = createReactAgent({
+        llm: this.llmModel,
+        tools: allTools,
+        checkpointSaver: this.memory,
+        messageModifier: this.getSystemPrompt(),
+      });
 
       await super.initialize();
-      this.logger.info('UtilityAgent initialized with real blockchain capabilities (CDP V2 Wallet)');
+      this.logger.info('UtilityAgent initialized with createReactAgent and real blockchain capabilities');
     } catch (error) {
       this.logger.error('Failed to initialize UtilityAgent with AgentKit', { error });
       throw error;
@@ -572,28 +594,48 @@ All balances are live from Base blockchain.`;
   }
 
   protected async handleMessage(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
+    try {
+      if (!this.reactAgent) {
+        throw new Error('React agent not initialized');
+      }
 
-    if (this.isEventQuery(content)) {
-      return await this.handleEventRequest(message, context);
-    } else if (this.isPaymentQuery(content)) {
-      return await this.handlePaymentRequest(message, context);
-    } else if (this.isExpenseQuery(content)) {
-      return await this.handleExpenseRequest(message, context);
+      const messageContent = typeof message.content === 'string' ? message.content : '';
+      const threadId = context.conversationId || 'default';
+
+      // Use React Agent to process the message with proper LLM + tool integration
+      let response = '';
+      const stream = await this.reactAgent.stream(
+        { messages: [new HumanMessage(messageContent)] },
+        { configurable: { thread_id: threadId } }
+      );
+
+      for await (const chunk of stream) {
+        if (chunk && typeof chunk === 'object' && 'agent' in chunk) {
+          const agentChunk = chunk as {
+            agent: { messages: Array<{ content: unknown }> };
+          };
+          response += String(agentChunk.agent.messages[0].content) + '\n';
+        }
+      }
+
+      return {
+        message: response.trim() || 'I can help you with event planning, payment splitting, and group coordination. What would you like to organize?',
+        metadata: { 
+          handledBy: 'utility-agent',
+          walletAddress: this.walletAddress || null,
+          networkId: process.env.NETWORK_ID || null,
+          usedReactAgent: true
+        },
+        actions: []
+      };
+    } catch (error) {
+      this.logger.error('Error in handleMessage', { error });
+      return {
+        message: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        metadata: { handledBy: 'utility-agent', error: true },
+        actions: []
+      };
     }
-
-    // Process with LLM using AgentKit tools for complex queries
-    const response = await this.processWithLLM(message.content as string, context);
-
-    return {
-      message: response,
-      metadata: { 
-        handledBy: 'utility-agent',
-        walletAddress: this.walletAddress || null,
-        networkId: process.env.NETWORK_ID || null
-      },
-      actions: []
-    };
   }
 
   protected async shouldHandleMessage(message: DecodedMessage, context: AgentContext): Promise<boolean> {

@@ -10,6 +10,10 @@ import {
   cdpApiActionProvider,
 } from '@coinbase/agentkit';
 import { getLangChainTools } from '@coinbase/agentkit-langchain';
+import { HumanMessage } from '@langchain/core/messages';
+import { MemorySaver } from '@langchain/langgraph';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { ChatOpenAI } from '@langchain/openai'
 import axios from 'axios';
 import {
   SocialAgentConfig,
@@ -23,11 +27,14 @@ import {
 
 /**
  * Production-grade SocialAgent with real content curation and blockchain tipping
- * Handles real news aggregation, sentiment analysis, and social tipping via USDC
+ * Uses createReactAgent for proper LLM + tool integration
  */
 export class SocialAgent extends BaseAgent {
   private agentKit?: AgentKit;
   private walletProvider?: CdpV2EvmWalletProvider;
+  private reactAgent?: ReturnType<typeof createReactAgent>;
+  private memory?: MemorySaver;
+  private llmModel?: ChatOpenAI;
   private contentSources: Map<string, ContentSource> = new Map();
   private curatedContent: Map<string, CuratedContent[]> = new Map();
   private userPreferences: Map<string, UserPreferences> = new Map();
@@ -38,18 +45,22 @@ export class SocialAgent extends BaseAgent {
   }
 
   /**
-   * Initialize AgentKit for blockchain tipping functionality
+   * Initialize AgentKit with createReactAgent for proper LLM integration
    */
   async initialize(): Promise<void> {
     try {
+      // Initialize LLM
+      this.llmModel = new ChatOpenAI({
+        model: "gpt-4o",
+        temperature: 0.3,
+      });
+
       // Configure CDP Wallet Provider for social tipping
       const config = {
         apiKeyId: process.env.CDP_API_KEY_ID!,
         apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
         networkId: process.env.NETWORK_ID || "base-sepolia",
       };
-
-      console.log('[SocialAgent] Config:', config);
 
       this.walletProvider = await CdpV2EvmWalletProvider.configureWithWallet(config);
 
@@ -67,14 +78,24 @@ export class SocialAgent extends BaseAgent {
 
       // Get AgentKit tools for LangChain integration
       const agentKitTools = await getLangChainTools(this.agentKit);
-      for (const tool of agentKitTools) {
-        if (tool instanceof DynamicStructuredTool) {
-          this.tools.push(tool);
-        }
-      }
+      
+      // Add custom tools
+      this.initializeTools();
+      const allTools = [...agentKitTools, ...this.tools];
+
+      // Initialize memory for conversation context
+      this.memory = new MemorySaver();
+
+      // Create React Agent with LLM, tools, and memory
+      this.reactAgent = createReactAgent({
+        llm: this.llmModel,
+        tools: allTools,
+        checkpointSaver: this.memory,
+        messageModifier: this.getSystemPrompt(),
+      });
 
       await super.initialize();
-      this.logger.info('SocialAgent initialized with real content and blockchain capabilities');
+      this.logger.info('SocialAgent initialized with createReactAgent and real content capabilities');
     } catch (error) {
       this.logger.error('Failed to initialize SocialAgent with AgentKit', { error });
       throw error;
@@ -519,29 +540,47 @@ Return as JSON with:
   }
 
   protected async handleMessage(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
+    try {
+      if (!this.reactAgent) {
+        throw new Error('React agent not initialized');
+      }
 
-    if (this.isNewsRequest(content)) {
-      return await this.handleNewsRequest(message, context);
-    } else if (this.isContentRequest(content)) {
-      return await this.handleContentRequest(message, context);
-    } else if (this.isTrendingRequest(content)) {
-      return await this.handleTrendingRequest(message, context);
-    } else if (this.isTippingRequest(content)) {
-      return await this.handleTippingRequest(message, context);
+      const messageContent = typeof message.content === 'string' ? message.content : '';
+      const threadId = context.conversationId || 'default';
+
+      // Use React Agent to process the message with proper LLM + tool integration
+      let response = '';
+      const stream = await this.reactAgent.stream(
+        { messages: [new HumanMessage(messageContent)] },
+        { configurable: { thread_id: threadId } }
+      );
+
+      for await (const chunk of stream) {
+        if (chunk && typeof chunk === 'object' && 'agent' in chunk) {
+          const agentChunk = chunk as {
+            agent: { messages: Array<{ content: unknown }> };
+          };
+          response += String(agentChunk.agent.messages[0].content) + '\n';
+        }
+      }
+
+      return {
+        message: response.trim() || 'I can help you with crypto news, social content, and community engagement. What would you like to explore?',
+        metadata: { 
+          handledBy: 'social-agent',
+          walletAddress: this.walletProvider ? this.walletProvider.getAddress() : null,
+          usedReactAgent: true
+        },
+        actions: []
+      };
+    } catch (error) {
+      this.logger.error('Error in handleMessage', { error });
+      return {
+        message: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        metadata: { handledBy: 'social-agent', error: true },
+        actions: []
+      };
     }
-
-    // Process with LLM using real social tools
-    const response = await this.processWithLLM(typeof message.content === 'string' ? message.content : '', context);
-
-    return {
-      message: response,
-      metadata: { 
-        handledBy: 'social-agent',
-        walletAddress: this.walletProvider ? this.walletProvider.getAddress() : null
-      },
-      actions: []
-    };
   }
 
   protected async shouldHandleMessage(message: DecodedMessage, context: AgentContext): Promise<boolean> {

@@ -17,6 +17,10 @@ import {
   alloraActionProvider,
 } from '@coinbase/agentkit';
 import { getLangChainTools } from '@coinbase/agentkit-langchain';
+import { HumanMessage } from '@langchain/core/messages';
+import { MemorySaver } from '@langchain/langgraph';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { ChatOpenAI } from '@langchain/openai';
 import {
   TradingAgentConfig,
   AgentContext,
@@ -31,12 +35,15 @@ import axios from 'axios';
 
 /**
  * Production-grade TradingAgent with real blockchain operations via Coinbase AgentKit
- * Handles DeFi operations, trading activities, and portfolio management on Base network
+ * Uses createReactAgent for proper LLM + tool integration
  */
 export class TradingAgent extends BaseAgent {
   private agentKit?: AgentKit;
   private walletProvider?: CdpV2EvmWalletProvider;
   private walletAddress?: string;
+  private reactAgent?: ReturnType<typeof createReactAgent>;
+  private memory?: MemorySaver;
+  private llmModel?: ChatOpenAI;
   private portfolios: Map<string, Portfolio> = new Map();
   private priceAlerts: Map<string, PriceAlert> = new Map();
   private tradeHistory: Map<string, TradeRequest[]> = new Map();
@@ -46,23 +53,27 @@ export class TradingAgent extends BaseAgent {
   }
 
   /**
-   * Initialize AgentKit with real blockchain capabilities
+   * Initialize AgentKit with createReactAgent for proper LLM integration
    */
   async initialize(): Promise<void> {
     try {
       console.log('[TradingAgent] Initializing TradingAgent...');
+
+      // Initialize LLM
+      this.llmModel = new ChatOpenAI({
+        model: "gpt-4o",
+        temperature: 0.1,
+      });
 
       // Configure CDP V2 EVM Wallet Provider with real credentials
       const cdpWalletConfig = {
         apiKeyId: process.env.CDP_API_KEY_ID!,
         apiKeySecret: process.env.CDP_API_KEY_SECRET!,
         walletSecret: process.env.CDP_WALLET_SECRET!,
-        idempotencyKey: process.env.IDEMPOTENCY_KEY, // optional
-        address: process.env.ADDRESS as `0x${string}` | undefined, // optional
+        idempotencyKey: process.env.IDEMPOTENCY_KEY,
+        address: process.env.ADDRESS as `0x${string}` | undefined,
         networkId: process.env.NETWORK_ID!,
       };
-
-      console.log('[TradingAgent] CDP V2 Wallet Config:', cdpWalletConfig);
 
       this.walletProvider = await CdpV2EvmWalletProvider.configureWithWallet(cdpWalletConfig);
       this.walletAddress = this.walletProvider.getAddress();
@@ -99,14 +110,24 @@ export class TradingAgent extends BaseAgent {
 
       // Get AgentKit tools for LangChain integration
       const agentKitTools = await getLangChainTools(this.agentKit);
-      for (const tool of agentKitTools) {
-        if (tool instanceof DynamicStructuredTool) {
-          this.tools.push(tool);
-        }
-      }
+      
+      // Add custom tools
+      this.initializeTools();
+      const allTools = [...agentKitTools, ...this.tools];
+
+      // Initialize memory for conversation context
+      this.memory = new MemorySaver();
+
+      // Create React Agent with LLM, tools, and memory
+      this.reactAgent = createReactAgent({
+        llm: this.llmModel,
+        tools: allTools,
+        checkpointSaver: this.memory,
+        messageModifier: this.getSystemPrompt(),
+      });
 
       await super.initialize();
-      this.logger.info('TradingAgent initialized with real blockchain capabilities');
+      this.logger.info('TradingAgent initialized with createReactAgent and real blockchain capabilities');
     } catch (error) {
       this.logger.error('Failed to initialize TradingAgent with AgentKit', { error });
       throw error;
@@ -126,141 +147,13 @@ export class TradingAgent extends BaseAgent {
             if (!this.walletProvider) {
               throw new Error('Wallet provider not initialized');
             }
-            // Use walletProvider.getBalance() for native balance (ETH/BASE)
             const balance = await this.walletProvider.getBalance();
             const walletAddr = address || this.walletProvider.getAddress();
-            // Convert from wei to ETH/BASE (18 decimals)
             const balanceEth = Number(balance) / 1e18;
             return `Wallet Balance for ${walletAddr}: ${balanceEth} ETH/BASE`;
           } catch (error) {
             this.logger.error('Error getting wallet balance', { error });
             return `Error getting wallet balance: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          }
-        },
-      }),
-
-      new DynamicStructuredTool({
-        name: 'get_real_token_price',
-        description: 'Get real-time token price from Pyth Network',
-        schema: z.object({
-          symbol: z.string(),
-        }),
-        func: async ({ symbol }) => {
-          try {
-            // Use AgentKit's Pyth integration for real price data
-            const response = await this.executeAgentKitAction('get_price', {
-              symbol: symbol.toUpperCase(),
-            });
-            return response;
-          } catch (error) {
-            this.logger.error('Error getting token price', { error, symbol });
-            return `Error getting price for ${symbol}: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          }
-        },
-      }),
-
-      new DynamicStructuredTool({
-        name: 'execute_real_trade',
-        description: 'Execute real token swap on Base network using DEX',
-        schema: z.object({
-          fromToken: z.string(),
-          toToken: z.string(),
-          amount: z.string(),
-          slippage: z.number().optional().default(1),
-        }),
-        func: async ({ fromToken, toToken, amount, slippage }) => {
-          try {
-            if (!this.agentKit) {
-              throw new Error('AgentKit not initialized');
-            }
-
-            // Use AgentKit's trade functionality for real swaps
-            const response = await this.executeAgentKitAction('trade', {
-              amount,
-              fromAsset: fromToken,
-              toAsset: toToken,
-              slippage: slippage / 100, // Convert percentage to decimal
-            });
-
-            return `Trade executed: ${amount} ${fromToken} → ${toToken}. Transaction: ${response}`;
-          } catch (error) {
-            this.logger.error('Error executing trade', { error, fromToken, toToken, amount });
-            return `Error executing trade: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          }
-        },
-      }),
-
-      new DynamicStructuredTool({
-        name: 'deploy_erc20_token',
-        description: 'Deploy a new ERC-20 token on Base network',
-        schema: z.object({
-          name: z.string(),
-          symbol: z.string(),
-          totalSupply: z.string(),
-        }),
-        func: async ({ name, symbol, totalSupply }) => {
-          try {
-            if (!this.agentKit) {
-              throw new Error('AgentKit not initialized');
-            }
-
-            const response = await this.executeAgentKitAction('deploy_token', {
-              name,
-              symbol,
-              totalSupply,
-            });
-
-            return `Token deployed: ${name} (${symbol}) with supply ${totalSupply}. Contract: ${response}`;
-          } catch (error) {
-            this.logger.error('Error deploying token', { error, name, symbol });
-            return `Error deploying token: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          }
-        },
-      }),
-
-      new DynamicStructuredTool({
-        name: 'request_testnet_funds',
-        description: 'Request testnet ETH from faucet for Base Sepolia',
-        schema: z.object({}),
-        func: async () => {
-          try {
-            if (!this.agentKit) {
-              throw new Error('AgentKit not initialized');
-            }
-
-            const response = await this.executeAgentKitAction('request_faucet_funds');
-            return `Testnet funds requested successfully: ${response}`;
-          } catch (error) {
-            this.logger.error('Error requesting faucet funds', { error });
-            return `Error requesting testnet funds: ${error instanceof Error ? error.message : 'Unknown error'}`;
-          }
-        },
-      }),
-
-      new DynamicStructuredTool({
-        name: 'transfer_tokens',
-        description: 'Transfer ERC-20 tokens to another address',
-        schema: z.object({
-          tokenAddress: z.string(),
-          recipientAddress: z.string(),
-          amount: z.string(),
-        }),
-        func: async ({ tokenAddress, recipientAddress, amount }) => {
-          try {
-            if (!this.agentKit) {
-              throw new Error('AgentKit not initialized');
-            }
-
-            const response = await this.executeAgentKitAction('transfer', {
-              to: recipientAddress,
-              amount,
-              assetId: tokenAddress,
-            });
-
-            return `Transfer completed: ${amount} tokens sent to ${recipientAddress}. Transaction: ${response}`;
-          } catch (error) {
-            this.logger.error('Error transferring tokens', { error, tokenAddress, recipientAddress });
-            return `Error transferring tokens: ${error instanceof Error ? error.message : 'Unknown error'}`;
           }
         },
       }),
@@ -277,8 +170,6 @@ export class TradingAgent extends BaseAgent {
               throw new Error('Wallet provider not initialized');
             }
             const walletAddr = this.walletProvider.getAddress();
-            // Use BaseScan (or Etherscan for Ethereum) public API as fallback
-            // Example for BaseScan:
             const apiKey = process.env.BASESCAN_API_KEY;
             const url = `https://api.basescan.org/api?module=account&action=txlist&address=${walletAddr}&sort=desc&page=1&offset=${limit}${apiKey ? `&apikey=${apiKey}` : ''}`;
             const resp = await axios.get(url);
@@ -306,7 +197,6 @@ export class TradingAgent extends BaseAgent {
             const analyses = await Promise.all(
               tokens.map(async (token: string) => {
                 try {
-                  // Get real price data from CoinGecko
                   const response = await axios.get(`https://api.coingecko.com/api/v3/simple/price`, {
                     params: {
                       ids: token.toLowerCase(),
@@ -339,85 +229,47 @@ export class TradingAgent extends BaseAgent {
     );
   }
 
-  /**
-   * Execute AgentKit actions with proper error handling
-   */
-  private async executeAgentKitAction(action: string, params?: any): Promise<any> {
-    if (!this.agentKit) {
-      throw new Error('AgentKit not initialized');
-    }
-
-    // Use the LLM to process the action through AgentKit
-    const prompt = `Execute the following blockchain action: ${action}${params ? ` with parameters: ${JSON.stringify(params)}` : ''}`;
-    
-    try {
-      const walletAddress = this.walletProvider ? this.walletProvider.getAddress() : 'unknown';
-      
-      const response = await this.processWithLLM(prompt, {
-        userId: 'system',
-        conversationId: 'trading-action',
-        messageHistory: [],
-      });
-
-      return response;
-    } catch (error) {
-      this.logger.error('AgentKit action failed', { action, params, error });
-      throw error;
-    }
-  }
-
   protected async handleMessage(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    console.log('[TradingAgent] Received message:', message);
-    const content = typeof message.content === 'string' ? message.content.toLowerCase() : '';
-
-    // Intent parsing
-    let intent = '';
-    if (content.includes('portfolio')) {
-      intent = 'check_portfolio';
-    } else if (content.includes('market price')) {
-      intent = 'check_market_prices';
-    } else if (content.includes('swap')) {
-      intent = 'swap_tokens';
-    } else {
-      intent = 'unknown';
-    }
-    console.log('[TradingAgent] Parsed intent:', intent);
-
     try {
-      switch (intent) {
-        case 'check_market_prices':
-          console.log('[TradingAgent] Handling check_market_prices intent');
-          // Simulate API call or real implementation
-          // const prices = await getMarketPrices();
-          // console.log('[TradingAgent] Market prices fetched:', prices);
-          return {
-            message: 'Current market prices: ...',
-            metadata: { intent: 'check_market_prices' },
-          };
-        case 'check_portfolio':
-          console.log('[TradingAgent] Handling check_portfolio intent');
-          return {
-            message: 'Your portfolio: ...',
-            metadata: { intent: 'check_portfolio' },
-          };
-        case 'swap_tokens':
-          console.log('[TradingAgent] Handling swap_tokens intent');
-          return {
-            message: 'Token swap functionality coming soon.',
-            metadata: { intent: 'swap_tokens' },
-          };
-        default:
-          console.log('[TradingAgent] Fallback: Unknown intent, returning default response');
-          return {
-            message: 'I can assist with DeFi operations and portfolio management. Please specify your request.',
-            metadata: { intent: 'unknown' },
-          };
+      if (!this.reactAgent) {
+        throw new Error('React agent not initialized');
       }
-    } catch (error) {
-      console.error('[TradingAgent] Error handling intent:', intent, error);
+
+      const messageContent = typeof message.content === 'string' ? message.content : '';
+      const threadId = context.conversationId || 'default';
+
+      // Use React Agent to process the message with proper LLM + tool integration
+      let response = '';
+      const stream = await this.reactAgent.stream(
+        { messages: [new HumanMessage(messageContent)] },
+        { configurable: { thread_id: threadId } }
+      );
+
+      for await (const chunk of stream) {
+        if (chunk && typeof chunk === 'object' && 'agent' in chunk) {
+          const agentChunk = chunk as {
+            agent: { messages: Array<{ content: unknown }> };
+          };
+          response += String(agentChunk.agent.messages[0].content) + '\n';
+        }
+      }
+
       return {
-        message: 'Sorry, there was an error processing your request.',
-        metadata: { intent, error: error instanceof Error ? error.message : String(error) },
+        message: response.trim() || 'I can help you with DeFi operations, trading, and portfolio management. What would you like to do?',
+        metadata: { 
+          handledBy: 'trading-agent',
+          walletAddress: this.walletAddress || null,
+          networkId: process.env.NETWORK_ID || null,
+          usedReactAgent: true
+        },
+        actions: []
+      };
+    } catch (error) {
+      this.logger.error('Error in handleMessage', { error });
+      return {
+        message: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        metadata: { handledBy: 'trading-agent', error: true },
+        actions: []
       };
     }
   }
@@ -443,83 +295,6 @@ export class TradingAgent extends BaseAgent {
     if (content.includes('app') || content.includes('tool')) return 'miniapp';
     
     return 'master';
-  }
-
-  private isTradingQuery(content: string): boolean {
-    return /\b(trade|swap|buy|sell|exchange)\b/.test(content);
-  }
-
-  private isPortfolioQuery(content: string): boolean {
-    return /\b(portfolio|balance|wallet|holdings)\b/.test(content);
-  }
-
-  private isPriceQuery(content: string): boolean {
-    return /\b(price|cost|value|worth|market)\b/.test(content);
-  }
-
-  private isDeploymentQuery(content: string): boolean {
-    return /\b(deploy|create|launch|mint|token|contract)\b/.test(content);
-  }
-
-  private async handleTradingRequest(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const prompt = `Process this trading request: "${message.content}". Use the available trading tools to execute the trade if requested.`;
-    const response = await this.processWithLLM(prompt, context);
-    
-    return {
-      message: response,
-      metadata: { handledBy: 'trading-agent', category: 'trading' },
-      actions: [
-        {
-          type: 'transaction',
-          payload: { 
-            request: message.content,
-            timestamp: new Date()
-          }
-        }
-      ]
-    };
-  }
-
-  private async handlePortfolioRequest(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const prompt = `Provide portfolio information for: "${message.content}". Use wallet balance tools to get real data.`;
-    const response = await this.processWithLLM(prompt, context);
-    
-    return {
-      message: response,
-      metadata: { handledBy: 'trading-agent', category: 'portfolio' },
-      actions: []
-    };
-  }
-
-  private async handlePriceRequest(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const prompt = `Get price information for: "${message.content}". Use real price data tools.`;
-    const response = await this.processWithLLM(prompt, context);
-    
-    return {
-      message: response,
-      metadata: { handledBy: 'trading-agent', category: 'price' },
-      actions: []
-    };
-  }
-
-  private async handleDeploymentRequest(message: DecodedMessage, context: AgentContext): Promise<AgentResponse> {
-    const prompt = `Handle deployment request: "${message.content}". Use token deployment tools if needed.`;
-    const response = await this.processWithLLM(prompt, context);
-    
-    return {
-      message: response,
-      metadata: { handledBy: 'trading-agent', category: 'deployment' },
-      actions: [
-        {
-          type: 'transaction',
-          payload: { 
-            request: message.content,
-            timestamp: new Date(),
-            action: 'deployment'
-          }
-        }
-      ]
-    };
   }
 
   protected getSystemPrompt(): string {
@@ -551,6 +326,8 @@ Guidelines:
 7. Always verify sufficient funds before operations
 
 Current network: ${process.env.NETWORK_ID || 'base-sepolia'}
-You can perform real transactions and provide actual blockchain services.`;
+Current wallet: ${this.walletAddress || 'Not initialized'}
+
+You can perform real transactions and provide actual blockchain services. Use the available tools to help users with their DeFi and trading needs.`;
   }
 } 
