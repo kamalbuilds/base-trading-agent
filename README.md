@@ -102,7 +102,7 @@ WALLET_PRIVATE_KEY=your_wallet_private_key_here
 ENCRYPTION_KEY=your_32_byte_hex_encryption_key_here
 
 # Optional for enhanced features
-CDP_API_KEY_NAME=your_cdp_api_key_name
+CDP_API_KEY_ID=your_CDP_API_KEY_ID
 CDP_API_KEY_PRIVATE_KEY=your_cdp_private_key
 ```
 
