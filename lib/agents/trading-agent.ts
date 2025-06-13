@@ -89,7 +89,7 @@ export class TradingAgent extends BaseAgent {
                 openseaActionProvider({
                   apiKey: process.env.OPENSEA_API_KEY,
                   networkId: process.env.NETWORK_ID!,
-                  privateKey: process.env.CDP_WALLET_SECRET!,
+                  privateKey: process.env.WALLET_PRIVATE_KEY!,
                 }),
               ]
             : []),
@@ -126,9 +126,12 @@ export class TradingAgent extends BaseAgent {
             if (!this.walletProvider) {
               throw new Error('Wallet provider not initialized');
             }
-            // Use walletAddress or AgentKit API for balance
-            // TODO: Implement real balance fetch using AgentKit v2
-            return `Wallet Balance for ${address || this.walletAddress}: [balance fetch not implemented]`;
+            // Use walletProvider.getBalance() for native balance (ETH/BASE)
+            const balance = await this.walletProvider.getBalance();
+            const walletAddr = address || this.walletProvider.getAddress();
+            // Convert from wei to ETH/BASE (18 decimals)
+            const balanceEth = Number(balance) / 1e18;
+            return `Wallet Balance for ${walletAddr}: ${balanceEth} ETH/BASE`;
           } catch (error) {
             this.logger.error('Error getting wallet balance', { error });
             return `Error getting wallet balance: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -273,9 +276,18 @@ export class TradingAgent extends BaseAgent {
             if (!this.walletProvider) {
               throw new Error('Wallet provider not initialized');
             }
-            // Use walletAddress or AgentKit API for tx history
-            // TODO: Implement real tx history fetch using AgentKit v2
-            return `Transaction History for ${this.walletAddress}: [tx history fetch not implemented]`;
+            const walletAddr = this.walletProvider.getAddress();
+            // Use BaseScan (or Etherscan for Ethereum) public API as fallback
+            // Example for BaseScan:
+            const apiKey = process.env.BASESCAN_API_KEY;
+            const url = `https://api.basescan.org/api?module=account&action=txlist&address=${walletAddr}&sort=desc&page=1&offset=${limit}${apiKey ? `&apikey=${apiKey}` : ''}`;
+            const resp = await axios.get(url);
+            if (resp.data.status !== '1') {
+              throw new Error(resp.data.message || 'Failed to fetch transaction history');
+            }
+            const txs = resp.data.result;
+            const formatted = txs.map((tx: any) => `Hash: ${tx.hash}\nFrom: ${tx.from}\nTo: ${tx.to}\nValue: ${Number(tx.value) / 1e18} ETH/BASE\nBlock: ${tx.blockNumber}\nTime: ${new Date(Number(tx.timeStamp) * 1000).toLocaleString()}\nStatus: ${tx.isError === '0' ? 'Success' : 'Failed'}`).join('\n\n');
+            return `Last ${txs.length} transactions for ${walletAddr}:\n\n${formatted}`;
           } catch (error) {
             this.logger.error('Error getting transaction history', { error });
             return `Error getting transaction history: ${error instanceof Error ? error.message : 'Unknown error'}`;
@@ -339,7 +351,7 @@ export class TradingAgent extends BaseAgent {
     const prompt = `Execute the following blockchain action: ${action}${params ? ` with parameters: ${JSON.stringify(params)}` : ''}`;
     
     try {
-      const walletAddress = this.walletProvider ? await (await this.walletProvider.getWallet().getDefaultAddress()).getId() : 'unknown';
+      const walletAddress = this.walletProvider ? this.walletProvider.getAddress() : 'unknown';
       
       const response = await this.processWithLLM(prompt, {
         userId: 'system',

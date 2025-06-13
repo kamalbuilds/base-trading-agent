@@ -12,10 +12,20 @@ import {
   erc721ActionProvider,
   cdpApiActionProvider,
   cdpWalletActionProvider,
+  // Protocol action providers
+  moonwellActionProvider,
+  jupiterActionProvider,
+  pythActionProvider,
+  alloraActionProvider,
+  defillamaActionProvider,
+  morphoActionProvider,
+  // openseaActionProvider,
+  // farcasterActionProvider,
+  twitterActionProvider,
+  wowActionProvider,
+  flaunchActionProvider,
+  zeroDevWalletActionProvider,
 } from '@coinbase/agentkit';
-import {
-  CdpV2SolanaWalletProvider, // for solana
-} from "@coinbase/agentkit";
 import { getLangChainTools } from '@coinbase/agentkit-langchain';
 import {
   UtilityAgentConfig,
@@ -74,6 +84,7 @@ export class UtilityAgent extends BaseAgent {
       this.agentKit = await AgentKit.from({
         walletProvider: this.walletProvider,
         actionProviders: [
+          // Core
           wethActionProvider(),
           walletActionProvider(),
           erc20ActionProvider(),
@@ -86,6 +97,30 @@ export class UtilityAgent extends BaseAgent {
             apiKeyId: process.env.CDP_API_KEY_NAME!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
           }),
+          // Protocols
+          moonwellActionProvider(), // Moonwell DeFi
+          jupiterActionProvider(), // Jupiter DEX (Solana)
+          pythActionProvider(), // Pyth price feeds
+          alloraActionProvider(), // Allora Network
+          defillamaActionProvider(), // DefiLlama analytics
+          morphoActionProvider(), // Morpho lending
+          // superfluidActionProvider(), // Not available in TypeScript AgentKit
+          // openseaActionProvider({ apiKey: process.env.OPENSEA_API_KEY }), // OpenSea NFT
+          twitterActionProvider(
+            {
+              apiKey: process.env.TWITTER_API_KEY,
+              apiSecret: process.env.TWITTER_API_SECRET,
+              accessToken: process.env.TWITTER_ACCESS_TOKEN,
+              accessTokenSecret: process.env.TWITTER_ACCESS_SECRET,
+            }
+          ), // Twitter API
+          wowActionProvider(), // World of Women NFT
+          flaunchActionProvider({
+            pinataJwt: process.env.PINATA_JWT,
+          }), // Flaunch launchpad
+          // onrampActionProvider(), // Not available in TypeScript AgentKit
+          // vaultsfyiActionProvider(), // Not available in TypeScript AgentKit
+          zeroDevWalletActionProvider(), // ZeroDev AA
         ],
       });
 

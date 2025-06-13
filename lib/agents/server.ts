@@ -524,6 +524,13 @@ export class BaseAgentsServer extends EventEmitter {
       ],
     });
   }
+
+  /**
+   * Get an agent by type/name
+   */
+  public getAgent(agentType: string): any {
+    return this.agents.get(agentType);
+  }
 }
 
 // Start the server if this file is run directly

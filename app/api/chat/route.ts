@@ -67,62 +67,39 @@ export async function POST(request: NextRequest) {
  * Process message through appropriate agent
  */
 async function processMessage(message: string, agentType: string, context: any) {
-  const agentResponses = {
-    master: `🎯 **MasterAgent**: I've analyzed your message "${message}". I can help route you to the right specialist or handle general queries. What would you like to do?`,
-    
-    utility: `🔧 **UtilityAgent**: I can help with event planning, payment splitting, and group coordination. For "${message}", I suggest creating a group event or setting up shared payments.`,
-    
-    trading: `📈 **TradingAgent**: I can assist with DeFi operations and portfolio management. Regarding "${message}", would you like me to check current market prices or help with token swaps?`,
-    
-    game: `🎮 **GameAgent**: Ready to play! For "${message}", I can start a trivia game, word game, or create an interactive betting scenario with the group.`,
-    
-    social: `📱 **SocialAgent**: I can help curate content and manage social interactions. Based on "${message}", I can share trending topics or relevant news for your group.`,
-    
-    miniapp: `🛠️ **MiniAppAgent**: I can launch mini-applications within the chat. For "${message}", I could start a calculator, converter, or other utility tools.`
+  // Map UI agentType to agent class name
+  const agentTypeMap: Record<string, string> = {
+    master: 'MasterAgent',
+    utility: 'UtilityAgent',
+    trading: 'TradingAgent',
+    game: 'GameAgent',
+    social: 'SocialAgent',
+    miniapp: 'MiniAppAgent',
   };
+  const agentClassName = agentTypeMap[agentType?.toLowerCase()] || 'MasterAgent';
 
-  const selectedAgent = agentType?.toLowerCase() || 'master';
-  const response = agentResponses[selectedAgent as keyof typeof agentResponses] || agentResponses.master;
+  // Get the agent instance from the global agent server
+  const agent = global.agentServer?.getAgent?.(agentClassName);
+  if (!agent) {
+    throw new Error(`Agent ${agentClassName} not found or not initialized`);
+  }
 
-  // Simulate some processing time
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Call the agent's real message handler (which should use LLM + tools)
+  // Construct a DecodedMessage-like object for processMessage
+  const messageObj = {
+    content: message,
+    conversationId: context?.conversationId || 'web',
+    id: `web-${Date.now()}`,
+    senderInboxId: context?.walletAddress || 'web-user',
+    sentAt: new Date(),
+  };
+  const agentResponse = await agent.processMessage?.(messageObj, context);
 
+  // Return the real response (text, actions, etc.)
   return {
-    text: response,
-    agent: selectedAgent,
-    actions: generateSampleActions(selectedAgent, message),
+    text: agentResponse?.message || '',
+    agent: agentType,
+    actions: agentResponse?.actions || [],
     timestamp: new Date().toISOString()
   };
-}
-
-/**
- * Generate sample actions based on agent type and message
- */
-function generateSampleActions(agentType: string, message: string) {
-  const actionSets = {
-    utility: [
-      { type: 'create_event', label: 'Create Event', description: 'Plan a new group event' },
-      { type: 'split_payment', label: 'Split Payment', description: 'Split a bill among participants' }
-    ],
-    trading: [
-      { type: 'check_prices', label: 'Check Prices', description: 'View current token prices' },
-      { type: 'portfolio_view', label: 'View Portfolio', description: 'See your holdings' }
-    ],
-    game: [
-      { type: 'start_trivia', label: 'Start Trivia', description: 'Begin a trivia game' },
-      { type: 'word_game', label: 'Word Game', description: 'Play a word-based game' }
-    ],
-    social: [
-      { type: 'trending_news', label: 'Trending News', description: 'Show trending topics' },
-      { type: 'group_insights', label: 'Group Insights', description: 'Analyze group activity' }
-    ],
-    miniapp: [
-      { type: 'calculator', label: 'Calculator', description: 'Open calculator app' },
-      { type: 'converter', label: 'Unit Converter', description: 'Convert between units' }
-    ]
-  };
-
-  return actionSets[agentType as keyof typeof actionSets] || [
-    { type: 'help', label: 'Get Help', description: 'Show available commands' }
-  ];
 } 
