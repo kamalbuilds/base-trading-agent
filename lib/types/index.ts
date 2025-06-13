@@ -246,6 +246,7 @@ export interface CuratedContent {
   category: string;
   relevanceScore: number;
   timestamp: Date;
+  url?: string;
   engagementMetrics?: EngagementMetrics;
 }
 

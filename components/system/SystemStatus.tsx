@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CheckCircleIcon, ExclamationTriangleIcon, PlayIcon, StopIcon } from '@heroicons/react/24/outline';
-import { useAgents } from '../../../hooks/useAgents';
+import { useAgents } from '../../hooks/useAgents';
 
 export function SystemStatus() {
   const [showDetails, setShowDetails] = useState(false);

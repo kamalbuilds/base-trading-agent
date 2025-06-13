@@ -45,7 +45,7 @@ export class UtilityAgent extends BaseAgent {
     try {
       // Configure CDP Wallet Provider with real credentials
       const config = {
-        apiKeyId: process.env.CDP_API_KEY_NAME!,
+        apiKeyId: process.env.CDP_API_KEY_ID!,
         apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
         networkId: process.env.NETWORK_ID || "base-sepolia",
       };
@@ -61,11 +61,11 @@ export class UtilityAgent extends BaseAgent {
           erc20ActionProvider(),
           erc721ActionProvider(),
           cdpApiActionProvider({
-            apiKeyId: process.env.CDP_API_KEY_NAME!,
+            apiKeyId: process.env.CDP_API_KEY_ID!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
           }),
           cdpWalletActionProvider({
-            apiKeyId: process.env.CDP_API_KEY_NAME!,
+            apiKeyId: process.env.CDP_API_KEY_ID!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
           }),
         ],
@@ -108,7 +108,7 @@ export class UtilityAgent extends BaseAgent {
               id: splitId,
               totalAmount,
               currency: 'USDC',
-              participants: participants.map(address => ({
+              participants: participants.map((address: string) => ({
                 address,
                 amount: amountPerPerson,
                 paid: false,
@@ -121,7 +121,7 @@ export class UtilityAgent extends BaseAgent {
 
             // Execute actual USDC transfers to participants
             const transfers = await Promise.all(
-              participants.map(async (address) => {
+              participants.map(async (address: string) => {
                 try {
                   const transferResult = await this.executeTransfer(address, amountPerPerson.toString(), 'USDC');
                   return { address, success: true, hash: transferResult };
@@ -311,8 +311,8 @@ Next steps:
 
             // Create reimbursement plan
             const reimbursements = sharedWith
-              .filter(addr => addr !== paidBy)
-              .map(addr => ({
+              .filter((addr: string) => addr !== paidBy)
+              .map((addr: string) => ({
                 from: addr,
                 to: paidBy,
                 amount: splitAmount,
@@ -329,7 +329,7 @@ Next steps:
 📊 Per person: ${splitAmount.toFixed(2)} USDC
 
 Reimbursement needed:
-${reimbursements.map(r => 
+${reimbursements.map((r: any) => 
   `• ${r.from} owes ${r.to}: ${r.amount.toFixed(2)} USDC`
 ).join('\n')}
 
@@ -431,7 +431,7 @@ All successful transactions are recorded on Base blockchain for full transparenc
             const walletsToCheck = addresses || [await (await this.walletProvider.getWallet().getDefaultAddress()).getId()];
             
             const balanceResults = await Promise.all(
-              walletsToCheck.map(async (address) => {
+              walletsToCheck.map(async (address: string) => {
                 try {
                   // Note: This would need to be implemented with the actual wallet balance checking
                   // For now, using a placeholder that would integrate with AgentKit's balance checking

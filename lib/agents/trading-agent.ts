@@ -50,7 +50,7 @@ export class TradingAgent extends BaseAgent {
     try {
       // Configure CDP Wallet Provider with real credentials
       const config = {
-        apiKeyId: process.env.CDP_API_KEY_NAME!,
+        apiKeyId: process.env.CDP_API_KEY_ID!,
         apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
         networkId: process.env.NETWORK_ID || "base-sepolia",
       };
@@ -67,11 +67,11 @@ export class TradingAgent extends BaseAgent {
           erc20ActionProvider(),
           erc721ActionProvider(),
           cdpApiActionProvider({
-            apiKeyId: process.env.CDP_API_KEY_NAME!,
+            apiKeyId: process.env.CDP_API_KEY_ID!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
           }),
           cdpWalletActionProvider({
-            apiKeyId: process.env.CDP_API_KEY_NAME!,
+            apiKeyId: process.env.CDP_API_KEY_ID!,
             apiKeySecret: process.env.CDP_API_KEY_PRIVATE_KEY!,
           }),
           ...(process.env.OPENSEA_API_KEY

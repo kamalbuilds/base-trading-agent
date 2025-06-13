@@ -35,6 +35,8 @@ const ConnectWallet = () => {
     const [loading, setLoading] = useState(false);
 
     const handleJoinPlatform = async (address: `0x${string}`) => {
+
+        console.log("handleJoinPlatform", address)
         try {
             setLoading(true);
             const res = await fetch("/api/fetchWallet", {

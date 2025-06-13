@@ -16,3 +16,11 @@
 {"level":"info","message":"Initiating graceful shutdown...","service":"base-agents-server","timestamp":"2025-06-11T09:55:51.289Z"}
 {"level":"info","message":"🚀 Starting BaseAgents Server...","service":"base-agents-server","timestamp":"2025-06-11T09:56:44.151Z"}
 {"error":{},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-11T09:56:44.153Z"}
+{"level":"info","message":"🚀 Starting BaseAgents Server...","service":"base-agents-server","timestamp":"2025-06-12T17:36:08.086Z"}
+{"error":{},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-12T17:36:08.088Z"}
+{"level":"info","message":"🚀 Starting BaseAgents Server...","service":"base-agents-server","timestamp":"2025-06-12T17:45:47.123Z"}
+{"error":{},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-12T17:45:47.125Z"}
+{"level":"info","message":"Initiating graceful shutdown...","service":"base-agents-server","timestamp":"2025-06-13T04:03:00.232Z"}
+{"level":"info","message":"🚀 Starting BaseAgents Server...","service":"base-agents-server","timestamp":"2025-06-13T04:04:40.389Z"}
+{"level":"info","message":"✅ Environment validation passed","service":"base-agents-server","timestamp":"2025-06-13T04:04:40.391Z"}
+{"error":{"code":"XMTP_ERROR","metadata":{"error":{"code":"InvalidArg"}},"name":"XMTPError"},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-13T04:04:41.680Z"}
