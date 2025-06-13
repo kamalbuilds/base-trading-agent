@@ -12,15 +12,21 @@ declare global {
 export async function GET(request: NextRequest) {
   try {
     if (!global.agentServer) {
-      return NextResponse.json({ 
-        error: 'Agent server not initialized',
-        agents: [],
-        health: { status: 'offline', uptime: 0, agents: {}, xmtpConnected: false, lastHealthCheck: '' }
-      }, { status: 503 });
+      // Try to auto-start the agent server
+      try {
+        global.agentServer = new BaseAgentsServer();
+        await global.agentServer.start();
+      } catch (err) {
+        return NextResponse.json({
+          error: 'Agent server not initialized and failed to auto-start',
+          details: err instanceof Error ? err.message : String(err),
+          agents: [],
+          health: { status: 'offline', uptime: 0, agents: {}, xmtpConnected: false, lastHealthCheck: '' }
+        }, { status: 503 });
+      }
     }
 
     const health = global.agentServer.getSystemHealth();
-    
     return NextResponse.json({
       success: true,
       health,
@@ -29,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error getting agent status:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to get agent status',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
