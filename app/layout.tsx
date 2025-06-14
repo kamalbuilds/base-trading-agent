@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BaseAgents - Multi-Agent System for Base",
+  title: "BasedAgents - Multi-Agent System for Base",
   description: "Sophisticated multi-agent system for secure onchain messaging using XMTP, Coinbase AgentKit, and OnchainKit",
 };
 

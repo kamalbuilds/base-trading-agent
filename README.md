@@ -8,7 +8,7 @@ BasedAgents is a production-ready multi-agent system that brings the power of AI
 
 ### 🏆 Built for Base Batch Messaging Buildathon
 
-This project addresses all 5 focus areas of the buildathon:
+This project addresses 5 focus areas of the buildathon:
 - ✅ **Utility Agents**: Event planning, payment splitting, expense tracking
 - ✅ **Trading/DeFi Agents**: Portfolio management, token swaps, price alerts
 - ✅ **Agent/Mini App Interaction**: Seamless app launching within conversations

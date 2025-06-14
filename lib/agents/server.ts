@@ -24,7 +24,7 @@ import {
 dotenv.config();
 
 /**
- * BaseAgents Server - Orchestrates the multi-agent system
+ * BasedAgents Server - Orchestrates the multi-agent system
  */
 export class BaseAgentsServer extends EventEmitter {
   private logger: winston.Logger;
@@ -46,7 +46,7 @@ export class BaseAgentsServer extends EventEmitter {
    */
   async start(): Promise<void> {
     try {
-      this.logger.info('🚀 Starting BaseAgents Server...');
+      this.logger.info('🚀 Starting BasedAgents Server...');
 
       // Validate environment variables
       this.validateEnvironment();
@@ -64,11 +64,11 @@ export class BaseAgentsServer extends EventEmitter {
       this.startHealthMonitoring();
 
       this.isRunning = true;
-      this.logger.info('✅ BaseAgents Server started successfully');
+      this.logger.info('✅ BasedAgents Server started successfully');
       this.emit('started');
 
     } catch (error) {
-      this.logger.error('❌ Failed to start BaseAgents Server', { error });
+      this.logger.error('❌ Failed to start BasedAgents Server', { error });
       throw error;
     }
   }
@@ -78,7 +78,7 @@ export class BaseAgentsServer extends EventEmitter {
    */
   async stop(): Promise<void> {
     try {
-      this.logger.info('🛑 Stopping BaseAgents Server...');
+      this.logger.info('🛑 Stopping BasedAgents Server...');
 
       this.isRunning = false;
 
@@ -95,11 +95,11 @@ export class BaseAgentsServer extends EventEmitter {
       // Cleanup XMTP client
       await this.xmtpClient.cleanup();
 
-      this.logger.info('✅ BaseAgents Server stopped successfully');
+      this.logger.info('✅ BasedAgents Server stopped successfully');
       this.emit('stopped');
 
     } catch (error) {
-      this.logger.error('❌ Error stopping BaseAgents Server', { error });
+      this.logger.error('❌ Error stopping BasedAgents Server', { error });
       throw error;
     }
   }
@@ -135,7 +135,7 @@ export class BaseAgentsServer extends EventEmitter {
       console.log('[BaseAgentsServer] Initializing MasterAgent...');
       const masterConfig: MasterAgentConfig = {
         name: 'MasterAgent',
-        description: 'Central orchestrator for the BaseAgents multi-agent system',
+        description: 'Central orchestrator for the BasedAgents multi-agent system',
         capabilities: ['routing', 'delegation', 'system_management', 'agent_coordination'],
         version: '1.0.0',
         isActive: true,

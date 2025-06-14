@@ -362,7 +362,7 @@ export class MasterAgent extends BaseAgent {
    */
   private getHelpResponse(): AgentResponse {
     return {
-      message: `🚀 **Welcome to BaseAgents!**\n\nI'm your MasterAgent, orchestrating a team of specialized AI agents for onchain messaging and operations.\n\n**What I can help with:**\n• Route you to the right specialist agent\n• Provide system information\n• Coordinate multi-agent workflows\n\n**Try asking:**\n• "What's my portfolio worth?" (Trading)\n• "Let's play a game!" (Gaming)\n• "Plan an event for Friday" (Utility)\n• "Show me latest crypto news" (Social)\n• "Open a calculator" (MiniApp)\n\nJust tell me what you need!`,
+      message: `🚀 **Welcome to BasedAgents!**\n\nI'm your MasterAgent, orchestrating a team of specialized AI agents for onchain messaging and operations.\n\n**What I can help with:**\n• Route you to the right specialist agent\n• Provide system information\n• Coordinate multi-agent workflows\n\n**Try asking:**\n• "What's my portfolio worth?" (Trading)\n• "Let's play a game!" (Gaming)\n• "Plan an event for Friday" (Utility)\n• "Show me latest crypto news" (Social)\n• "Open a calculator" (MiniApp)\n\nJust tell me what you need!`,
       metadata: { type: 'help' },
     };
   }
@@ -372,7 +372,7 @@ export class MasterAgent extends BaseAgent {
    */
   private getGeneralSystemResponse(): AgentResponse {
     return {
-      message: `I'm the MasterAgent coordinating the BaseAgents system. How can I help you today?`,
+      message: `I'm the MasterAgent coordinating the BasedAgents system. How can I help you today?`,
       metadata: { type: 'general' },
     };
   }

@@ -6,3 +6,4 @@
 {"error":{},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-12T17:36:08.088Z"}
 {"error":{},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-12T17:45:47.125Z"}
 {"error":{"code":"XMTP_ERROR","metadata":{"error":{"code":"InvalidArg"}},"name":"XMTPError"},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-13T04:04:41.680Z"}
+{"error":{"code":"XMTP_ERROR","metadata":{"error":{}},"name":"XMTPError"},"level":"error","message":"❌ Failed to start BaseAgents Server","service":"base-agents-server","timestamp":"2025-06-14T04:41:38.498Z"}

@@ -1,9 +1,9 @@
-# BaseAgents Multi-Agent System - Cursor Rules
+# BasedAgents Multi-Agent System - Cursor Rules
 
 You are an expert AI assistant helping to build a production-ready multi-agent system for the Base Batch Messaging Buildathon. Follow these rules strictly:
 
 ## Project Overview
-Building "BaseAgents" - a sophisticated multi-agent messaging system that combines XMTP secure messaging, Coinbase AgentKit blockchain capabilities, and OnchainKit components to create the next generation of onchain communication.
+Building "BasedAgents" - a sophisticated multi-agent messaging system that combines XMTP secure messaging, Coinbase AgentKit blockchain capabilities, and OnchainKit components to create the next generation of onchain communication.
 
 ## Code Quality Standards
 

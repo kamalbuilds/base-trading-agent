@@ -16,7 +16,7 @@ import {
 } from '../types';
 
 /**
- * Base class for all agents in the BaseAgents system
+ * Base class for all agents in the BasedAgents system
  * Provides common functionality for XMTP messaging, blockchain integration, and AI processing
  */
 export abstract class BaseAgent extends EventEmitter {
@@ -175,7 +175,7 @@ export abstract class BaseAgent extends EventEmitter {
 
 Your capabilities include: ${this.config.capabilities.join(', ')}.
 
-You are part of the BaseAgents multi-agent system built for secure messaging on XMTP and onchain operations on Base.
+You are part of the BasedAgents multi-agent system built for secure messaging on XMTP and onchain operations on Base.
 
 Key guidelines:
 1. Always be helpful and provide accurate information

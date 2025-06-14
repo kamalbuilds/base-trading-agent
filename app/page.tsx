@@ -37,7 +37,7 @@ export default function Home() {
                   <span className="text-white font-bold text-sm">BA</span>
                 </div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  BaseAgents
+                  BasedAgents
                 </h1>
               </div>
               <div className="hidden md:block">

@@ -9,3 +9,4 @@
 {"level":"info","message":"XMTP client cleaned up","service":"xmtp-client","timestamp":"2025-06-13T04:03:00.245Z"}
 {"address":"0x666446eC2343e9E7e3D75C4C5b6A15355Ec7d7D4","env":"dev","level":"info","message":"Initializing XMTP client","service":"xmtp-client","timestamp":"2025-06-13T04:04:40.438Z"}
 {"error":{"code":"InvalidArg"},"level":"error","message":"Failed to initialize XMTP client","service":"xmtp-client","timestamp":"2025-06-13T04:04:41.679Z"}
+{"error":{},"level":"error","message":"Failed to initialize XMTP client","service":"xmtp-client","timestamp":"2025-06-14T04:41:38.498Z"}

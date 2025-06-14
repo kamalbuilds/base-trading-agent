@@ -3,3 +3,4 @@
 {"error":{"code":"XMTP_ERROR","metadata":{"error":{"argument":"value","code":"INVALID_ARGUMENT","shortMessage":"invalid BytesLike value","value":"0xyour_wallet_private_key_here"}},"name":"XMTPError"},"level":"error","message":"Failed to initialize XMTP client","service":"xmtp-client","timestamp":"2025-06-11T06:42:30.077Z"}
 {"error":{"code":"XMTP_ERROR","metadata":{"error":{"argument":"value","code":"INVALID_ARGUMENT","shortMessage":"invalid BytesLike value","value":"0xyour_wallet_private_key_here"}},"name":"XMTPError"},"level":"error","message":"Failed to initialize XMTP client","service":"xmtp-client","timestamp":"2025-06-11T06:42:30.751Z"}
 {"error":{"code":"InvalidArg"},"level":"error","message":"Failed to initialize XMTP client","service":"xmtp-client","timestamp":"2025-06-13T04:04:41.679Z"}
+{"error":{},"level":"error","message":"Failed to initialize XMTP client","service":"xmtp-client","timestamp":"2025-06-14T04:41:38.498Z"}
