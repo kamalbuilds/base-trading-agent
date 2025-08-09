@@ -9,45 +9,45 @@ const agents = [
   {
     id: 'master',
     name: 'MasterAgent',
-    description: 'Central orchestrator and router',
+    description: 'DeFi orchestrator & strategy coordinator',
     icon: '🎯',
     color: 'from-blue-500 to-purple-500'
   },
   {
-    id: 'utility',
-    name: 'UtilityAgent',
-    description: 'Event planning & payments',
-    icon: '🛠️',
-    color: 'from-green-500 to-teal-500'
+    id: 'token-tracker',
+    name: 'TokenTracker',
+    description: 'Tracks trending tokens & wallet history',
+    icon: '📊',
+    color: 'from-green-500 to-emerald-500'
   },
   {
-    id: 'trading',
-    name: 'TradingAgent',
-    description: 'DeFi operations & trading',
-    icon: '📈',
-    color: 'from-orange-500 to-red-500'
+    id: 'swap-agent',
+    name: 'SwapAgent',
+    description: 'Executes token swaps & arbitrage',
+    icon: '💱',
+    color: 'from-blue-500 to-indigo-500'
   },
   {
-    id: 'gaming',
-    name: 'GameAgent',
-    description: 'Interactive games & betting',
-    icon: '🎮',
+    id: 'sentiment',
+    name: 'SentimentAgent',
+    description: 'Social sentiment & news analysis',
+    icon: '📰',
+    color: 'from-orange-500 to-amber-500'
+  },
+  {
+    id: 'portfolio',
+    name: 'PortfolioAgent',
+    description: 'Portfolio management & risk analysis',
+    icon: '💼',
     color: 'from-purple-500 to-pink-500'
   },
   {
-    id: 'social',
-    name: 'SocialAgent',
-    description: 'Content curation & news',
-    icon: '📰',
-    color: 'from-blue-500 to-cyan-500'
+    id: 'defi-analytics',
+    name: 'DeFiAnalytics',
+    description: 'Market analysis & yield optimization',
+    icon: '🔬',
+    color: 'from-cyan-500 to-teal-500'
   },
-  {
-    id: 'miniapp',
-    name: 'MiniAppAgent',
-    description: 'Mini-app management',
-    icon: '🚀',
-    color: 'from-indigo-500 to-purple-500'
-  }
 ];
 
 export function AgentSelector({ selectedAgent, onAgentSelect }: AgentSelectorProps) {
